@@ -24,3 +24,14 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Custom width classes for wider sidebar */
+.w-120 {
+  width: 30rem;
+  /* 480px - 50% wider than w-80 (320px) */
+}
+
+.mr-120 {
+  margin-right: 30rem;
+  /* 480px - 50% wider than mr-80 (320px) */
+}
