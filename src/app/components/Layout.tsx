@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-// Mock data for right sidebar table
+// Mock data for right sidebar table (will be replaced with API data)
 const pantryItems = [
     { name: "Rice", quantity: "2 lbs", expiry: "2024-02-15" },
     { name: "Chicken Breast", quantity: "1.5 lbs", expiry: "2024-01-20" },
