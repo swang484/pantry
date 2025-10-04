@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Layout from "./components/Layout";
 
 // Mock data for posts
@@ -5,36 +8,42 @@ const posts = [
   {
     id: 1,
     title: "Homemade Pasta with Fresh Basil",
-    caption: "Made this amazing pasta dish using ingredients from my pantry! The fresh basil really makes it pop. #pantrycooking #homemade",
-    image: "https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=500&h=400&fit=crop",
+    caption:
+      "Made this amazing pasta dish using ingredients from my pantry! The fresh basil really makes it pop. #pantrycooking #homemade",
+    image:
+      "https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=500&h=400&fit=crop",
     author: "chef_sarah",
     likes: 42,
-    comments: 8
+    comments: 8,
   },
   {
     id: 2,
     title: "Quick Stir-Fry with Leftover Vegetables",
-    caption: "Nothing beats a quick stir-fry when you need to use up those veggies before they go bad. Added some soy sauce and garlic - perfection! 🍜",
-    image: "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=500&h=400&fit=crop",
+    caption:
+      "Nothing beats a quick stir-fry when you need to use up those veggies before they go bad. Added some soy sauce and garlic - perfection! 🍜",
+    image:
+      "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=500&h=400&fit=crop",
     author: "cooking_mike",
     likes: 28,
-    comments: 5
+    comments: 5,
   },
   {
     id: 3,
     title: "Overnight Oats with Berries",
-    caption: "Prepped these overnight oats last night with some frozen berries from the freezer. Perfect healthy breakfast! #mealprep #healthy",
-    image: "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=500&h=400&fit=crop",
+    caption:
+      "Prepped these overnight oats last night with some frozen berries from the freezer. Perfect healthy breakfast! #mealprep #healthy",
+    image:
+      "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=500&h=400&fit=crop",
     author: "healthy_jenny",
     likes: 67,
-    comments: 12
-  }
+    comments: 12,
+  },
 ];
 
 export default function Home() {
   return (
     <Layout>
-      <div className="max-w-2xl mx-auto">
+      <div className="w-full max-w-2xl mx-auto">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">Recent Cooks</h2>
 
         {/* Twitter-esque Feed */}
