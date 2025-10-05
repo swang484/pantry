@@ -129,4 +129,25 @@ router.delete('/', async (req, res) => {
     }
 });
 
+// DELETE /api/pantry/by-name/:name - Remove ALL rows for a given item name (case-insensitive)
+router.delete('/by-name/:name', async (req, res) => {
+    try {
+        const rawName = req.params.name;
+        if (!rawName || !rawName.trim()) {
+            return res.status(400).json({ error: 'Item name required' });
+        }
+        const name = rawName.trim().toLowerCase();
+        // SQLite (and some providers) may not support the 'mode' argument; perform manual case-insensitive match.
+        const all = await prisma.pantryItem.findMany({ select: { id: true, name: true } });
+        const targetIds = all.filter(it => (it.name || '').trim().toLowerCase() === name).map(it => it.id);
+        if (!targetIds.length) {
+            return res.status(404).json({ error: 'No items found with that name' });
+        }
+        const del = await prisma.pantryItem.deleteMany({ where: { id: { in: targetIds } } });
+        res.json({ message: 'Items removed', name, deleted: del.count });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to remove items by name', detail: e.message });
+    }
+});
+
 module.exports = router;

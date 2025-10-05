@@ -2,16 +2,13 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useUpload } from "../context/UploadContext";
-import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos";
-import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import Image from "next/image";
 
 interface PantryBaseItem {
   name: string;
   image: string;
-  score: number; // retained for upload scoring logic
-  quantity?: number; // new optional quantity (preferred display when provided)
+  score: number; // legacy (can remove later)
+  quantity?: number; // preferred display
 }
 
 interface FoodItem extends PantryBaseItem {
@@ -31,7 +28,8 @@ const FALLBACK_ITEMS: PantryBaseItem[] = [
   { name: "Milk", image: "/food_milk.png", score: 2 },
 ];
 
-const ROW_ITEMS = 3;
+// Number of columns for vertical grid display
+const GRID_COLUMNS = 3;
 
 interface FlyingFood {
   id: string;
@@ -82,83 +80,14 @@ function PantryItem({
       </div>
       {!disabled && (
         <div className="absolute -left-[5px] top-[20px] bg-amber-500 text-white rounded-full min-w-6 h-6 px-1 flex items-center justify-center text-xs font-bold">
-          {typeof quantity === 'number' ? quantity : `+${score}`}
+          {typeof quantity === 'number' ? quantity : 1}
         </div>
       )}
     </div>
   );
 }
 
-function PantryRow({
-  items,
-  rowIndex,
-}: {
-  items: PantryItemProps[];
-  rowIndex: number;
-}) {
-  const [position, setPosition] = useState(0);
-  const maxPosition = Math.max(0, items.length - ROW_ITEMS);
-
-  const moveLeft = () => {
-    setPosition((prev) => Math.max(0, prev - 1));
-  };
-
-  const moveRight = () => {
-    setPosition((prev) => Math.min(maxPosition, prev + 1));
-  };
-
-  const visibleItems = items.slice(position, position + ROW_ITEMS);
-
-  return (
-    <div className="relative">
-      {position > 0 && (
-        <button
-          onClick={moveLeft}
-          className="absolute -left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-amber-900/50 text-amber-50 flex items-center justify-center z-10 hover:bg-amber-800/80 transition-all hover:scale-110"
-          aria-label="Move left"
-        >
-          <ArrowBackIosIcon style={{ fontSize: 14 }} />
-        </button>
-      )}
-      <div className="flex items-center -space-x-1">
-        {visibleItems.map((item, index) => (
-          <motion.div
-            key={item.id}
-            className="flex flex-col items-center p-3 rounded-lg cursor-pointer group relative"
-            whileHover={{
-              scale: 1.1,
-              rotate: [0, -2, 2, -2, 2, 0],
-            }}
-            transition={{
-              scale: { duration: 0.2 },
-              rotate: { duration: 0.5 },
-            }}
-            onClick={item.onClick}
-          >
-            <PantryItem
-              id={item.id}
-              name={item.name}
-              image={item.image}
-              score={item.score}
-              onClick={item.onClick}
-              disabled={item.disabled}
-              isUploadPage={item.isUploadPage}
-            />
-          </motion.div>
-        ))}
-      </div>
-      {position < maxPosition && (
-        <button
-          onClick={moveRight}
-          className="absolute -right-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-amber-900/50 text-amber-50 flex items-center justify-center z-10 hover:bg-amber-800/80 transition-all hover:scale-110"
-          aria-label="Move right"
-        >
-          <ArrowForwardIosIcon style={{ fontSize: 14 }} />
-        </button>
-      )}
-    </div>
-  );
-}
+// Removed horizontal slider logic; using a simple grid below.
 
 interface ExternalPantryItem {
   name: string;
@@ -168,7 +97,6 @@ interface ExternalPantryItem {
 }
 
 export default function Pantry({ items }: { items?: ExternalPantryItem[] }) {
-  const { score: currentScore, addToScore } = useUpload();
   const [flyingFoods, setFlyingFoods] = useState<FlyingFood[]>([]);
   const [disabledItems, setDisabledItems] = useState<Set<string>>(new Set());
   const [scoredItems, setScoredItems] = useState<Set<string>>(new Set());
@@ -205,9 +133,7 @@ export default function Pantry({ items }: { items?: ExternalPantryItem[] }) {
     setIsUploadPage(window.location.pathname === '/upload');
   }, []);
 
-  // Total score is just the current score from the context
-  // We don't need to calculate it here as it's already managed by the UploadContext
-  const totalScore = currentScore;
+  // Scoring removed from UI; legacy score logic can be fully deleted later.
 
   const emojiMap: Record<string, string> = {
     Lobster: "🦞",
@@ -234,8 +160,8 @@ export default function Pantry({ items }: { items?: ExternalPantryItem[] }) {
     }
 
     // Only add to score if we haven't scored this item before
+    // Score accumulation removed; keep placeholder for future gamification if needed
     if (!scoredItems.has(item.id)) {
-      addToScore(Math.ceil(item.score / 2)); // Increment by half the item's score, rounded up
       setScoredItems(prev => new Set(prev).add(item.id));
     }
     
@@ -258,20 +184,40 @@ export default function Pantry({ items }: { items?: ExternalPantryItem[] }) {
     setFlyingFoods(prev => [...prev, newFlyingFood]);
   };
 
-  // Group items into rows
-  const rows: PantryItemProps[][] = [];
-  for (let i = 0; i < pantryItems.length; i += ROW_ITEMS) {
-    const row = pantryItems
-      .slice(i, i + ROW_ITEMS)
-      .map((item, idx) => {
-        const itemId = `item-${i + idx}`;
-        const isDisabled = disabledItems.has(itemId);
-        return {
-          ...item,
-          id: itemId,
-          disabled: isDisabled,
-          isUploadPage: isUploadPage,
-          onClick: (e: React.MouseEvent) =>
+  // Flat list for grid
+  const gridItems = pantryItems.map((item, idx) => {
+    const itemId = `item-${idx}`;
+    const isDisabled = disabledItems.has(itemId);
+    return (
+      <motion.div
+        key={itemId}
+        className="flex flex-col items-center p-3 rounded-lg cursor-pointer group relative"
+        whileHover={{
+          scale: 1.1,
+          rotate: [0, -2, 2, -2, 2, 0],
+        }}
+        transition={{
+          scale: { duration: 0.2 },
+          rotate: { duration: 0.5 },
+        }}
+        onClick={(e) =>
+          handleItemClick(
+            {
+              ...item,
+              id: itemId,
+              disabled: isDisabled,
+            },
+            e
+          )
+        }
+      >
+        <PantryItem
+          id={itemId}
+          name={item.name}
+          image={item.image}
+          score={item.score}
+          quantity={item.quantity}
+          onClick={(e) =>
             handleItemClick(
               {
                 ...item,
@@ -279,11 +225,14 @@ export default function Pantry({ items }: { items?: ExternalPantryItem[] }) {
                 disabled: isDisabled,
               },
               e
-            ),
-        };
-      });
-    rows.push(row);
-  }
+            )
+          }
+          disabled={isDisabled}
+          isUploadPage={isUploadPage}
+        />
+      </motion.div>
+    );
+  });
 
   // Attempt to infer image from name if external items did not provide one
   function inferImage(name: string): string {
@@ -332,12 +281,7 @@ export default function Pantry({ items }: { items?: ExternalPantryItem[] }) {
           );
         })}
       </AnimatePresence>
-      <div className="mb-6">
-        <input
-          placeholder="Search Pantry..."
-          className="w-full rounded-full border border-amber-900 bg-amber-50/10 text-amber-50 px-4 py-2 outline-none focus:ring-2 focus:ring-amber-500/50 placeholder-amber-100/50"
-        />
-      </div>
+      {/* Search input removed per request */}
       <div className="relative">
         <div className="h-1 bg-[#793c1a] rounded-t-lg mb-2"></div>
 
@@ -346,29 +290,12 @@ export default function Pantry({ items }: { items?: ExternalPantryItem[] }) {
             Pantry
           </div>
 
-          <div className="space-y-6">
-        {rows.map((row, index) => (
-          <PantryRow
-            key={index}
-            items={row}
-            rowIndex={index}
-          />
-        ))}
-      </div>
+          <div className="grid grid-cols-3 gap-2">
+            {gridItems}
+          </div>
 
-          {/* Potential Score */}
-          <div className="mt-8 pt-4 border-t border-amber-900/30">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-amber-100 font-medium">Current Score:</span>
-              <span className="text-amber-50 text-xl font-bold">
-                {totalScore}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-amber-100 font-medium">
-                Pantry Items: {pantryItems.length}
-              </span>
-            </div>
+          <div className="mt-8 pt-4 border-t border-amber-900/30 text-amber-100 text-sm">
+            Total items: {pantryItems.length}
           </div>
         </div>
 

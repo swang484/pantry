@@ -32,6 +32,15 @@ export default function Layout({ children }: LayoutProps) {
     const [stats, setStats] = useState<PantryStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    // Manual add form state
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [addName, setAddName] = useState('');
+    const [addQty, setAddQty] = useState('1');
+    const [adding, setAdding] = useState(false);
+    const [addError, setAddError] = useState<string | null>(null);
+    const [removing, setRemoving] = useState(false);
+    const [removeName, setRemoveName] = useState('');
+    const [showRemoveForm, setShowRemoveForm] = useState(false);
 
     // Fetch backend pantry + stats
     useEffect(() => {
@@ -70,7 +79,9 @@ export default function Layout({ children }: LayoutProps) {
         const counts: Record<string, number> = {};
         for (const it of dbItems) {
             const key = it.name.trim();
-            counts[key] = (counts[key] || 0) + 1;
+            const numericQty = parseInt(it.quantity, 10);
+            const add = isNaN(numericQty) ? 1 : numericQty;
+            counts[key] = (counts[key] || 0) + add;
         }
         return Object.entries(counts).map(([name, count]) => ({ name, count }));
     }, [dbItems]);
@@ -111,6 +122,74 @@ export default function Layout({ children }: LayoutProps) {
         return list;
     }, [aggregatedNames]);
 
+    async function handleAdd(e: React.FormEvent) {
+        e.preventDefault();
+        if (adding) return;
+        const name = addName.trim();
+        const quantity = addQty.trim();
+        if (!name) { setAddError('Name required'); return; }
+        const num = parseInt(quantity, 10);
+        if (isNaN(num) || num <= 0) { setAddError('Quantity must be positive'); return; }
+        setAdding(true);
+        setAddError(null);
+        try {
+            const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+            const resp = await fetch(`${backendBase}/api/pantry`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, quantity: String(num) })
+            });
+            if (!resp.ok) {
+                const text = await resp.text();
+                throw new Error(`Add failed (${resp.status}) ${text}`);
+            }
+            setAddName('');
+            setAddQty('1');
+            setShowAddForm(false);
+            window.dispatchEvent(new CustomEvent('pantry:refresh'));
+        } catch (e: any) {
+            setAddError(e.message || 'Failed to add');
+        } finally {
+            setAdding(false);
+        }
+    }
+
+    async function handleClearAll() {
+        if (!confirm('Clear ALL pantry items?')) return;
+        const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+        try {
+            const resp = await fetch(`${backendBase}/api/pantry`, { method: 'DELETE' });
+            if (!resp.ok) throw new Error(`Clear failed: ${resp.status}`);
+            window.dispatchEvent(new CustomEvent('pantry:refresh'));
+        } catch (e: any) {
+            alert(e.message || 'Failed to clear');
+        }
+    }
+
+    async function handleRemove(e: React.FormEvent) {
+        e.preventDefault();
+        if (removing) return;
+        const name = removeName.trim();
+        if (!name) { return; }
+        if (!confirm(`Remove ALL '${name}' items?`)) return;
+        setRemoving(true);
+        try {
+            const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+            const resp = await fetch(`${backendBase}/api/pantry/by-name/${encodeURIComponent(name)}`, { method: 'DELETE' });
+            if (!resp.ok) {
+                const text = await resp.text();
+                throw new Error(`Remove failed (${resp.status}) ${text}`);
+            }
+            setRemoveName('');
+            setShowRemoveForm(false);
+            window.dispatchEvent(new CustomEvent('pantry:refresh'));
+        } catch (e:any) {
+            alert(e.message || 'Failed to remove item');
+        } finally {
+            setRemoving(false);
+        }
+    }
+
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="flex">
@@ -144,12 +223,6 @@ export default function Layout({ children }: LayoutProps) {
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/create" className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-3 rounded-lg transition-colors">
-                                    <span className="text-xl">✨</span>
-                                    <span>Create</span>
-                                </Link>
-                            </li>
-                            <li>
                                 <Link href="/upload" className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-3 rounded-lg transition-colors">
                                     <span className="text-xl">📤</span>
                                     <span>Upload</span>
@@ -164,6 +237,83 @@ export default function Layout({ children }: LayoutProps) {
 
                 {/* Right Sidebar - Pantry (visual style of version 1, dynamic content) */}
                 <div className="w-96 h-screen fixed right-0 top-0 overflow-y-auto bg-[#3f1203]">
+                    <div className="p-4">
+                        <div className="flex gap-2 mb-4">
+                            <button
+                                onClick={() => { setShowAddForm(s => !s); setAddError(null); if (showRemoveForm) setShowRemoveForm(false); }}
+                                className="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 text-sm font-semibold py-2 rounded-lg transition-colors border border-amber-300"
+                            >
+                                {showAddForm ? 'Cancel' : 'Add Item'}
+                            </button>
+                            <button
+                                onClick={() => { setShowRemoveForm(s => !s); if (showAddForm) setShowAddForm(false); }}
+                                className="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 text-sm font-semibold py-2 rounded-lg transition-colors border border-amber-300"
+                            >
+                                {showRemoveForm ? 'Cancel' : 'Remove Item'}
+                            </button>
+                            <button
+                                onClick={handleClearAll}
+                                className="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 text-sm font-semibold py-2 rounded-lg transition-colors border border-amber-300 disabled:opacity-60"
+                                disabled={!aggregatedNames.length}
+                            >
+                                Clear
+                            </button>
+                        </div>
+                        {showAddForm && (
+                            <form onSubmit={handleAdd} className="mb-4 bg-amber-900/30 border border-amber-800 rounded-lg p-3 space-y-3">
+                                <div>
+                                    <label className="block text-xs text-amber-200 mb-1">Name</label>
+                                    <input
+                                        value={addName}
+                                        onChange={e => setAddName(e.target.value)}
+                                        className="w-full rounded-md bg-amber-50/10 border border-amber-700 text-amber-50 text-sm px-2 py-1 outline-none focus:ring-2 focus:ring-amber-500"
+                                        placeholder="e.g. chicken breast"
+                                        disabled={adding}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-amber-200 mb-1">Quantity</label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        value={addQty}
+                                        onChange={e => setAddQty(e.target.value)}
+                                        className="w-full rounded-md bg-amber-50/10 border border-amber-700 text-amber-50 text-sm px-2 py-1 outline-none focus:ring-2 focus:ring-amber-500"
+                                        disabled={adding}
+                                    />
+                                </div>
+                                {addError && <p className="text-xs text-red-300">{addError}</p>}
+                                <button
+                                    type="submit"
+                                    disabled={adding}
+                                    className="w-full bg-amber-100 hover:bg-amber-200 text-amber-900 disabled:opacity-60 text-sm font-semibold py-2 rounded-md border border-amber-300"
+                                >
+                                    {adding ? 'Adding...' : 'Save Item'}
+                                </button>
+                            </form>
+                        )}
+                        {showRemoveForm && (
+                            <form onSubmit={handleRemove} className="mb-4 bg-amber-900/30 border border-amber-800 rounded-lg p-3 space-y-3">
+                                <div>
+                                    <label className="block text-xs text-amber-200 mb-1">Item Name To Remove (ALL)</label>
+                                    <input
+                                        value={removeName}
+                                        onChange={e => setRemoveName(e.target.value)}
+                                        className="w-full rounded-md bg-amber-50/10 border border-amber-700 text-amber-50 text-sm px-2 py-1 outline-none focus:ring-2 focus:ring-amber-500"
+                                        placeholder="e.g. rice"
+                                        disabled={removing}
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={removing || !removeName.trim()}
+                                    className="w-full bg-amber-100 hover:bg-amber-200 text-amber-900 disabled:opacity-60 text-sm font-semibold py-2 rounded-md border border-amber-300"
+                                >
+                                    {removing ? 'Removing...' : 'Remove All'}
+                                </button>
+                            </form>
+                        )}
+                    </div>
                     <Pantry items={mergedPantryItems} />
                 </div>
             </div>
