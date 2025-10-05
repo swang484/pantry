@@ -6,10 +6,10 @@ import Pantry from "./Pantry";
 // Seed list (shown immediately on first paint, then merged with backend items when they load)
 const SEED_ITEMS = [
     "rice",
-    "carrot", 
+    "carrot",
     "lobster",
     "milk",
-    "steak" 
+    "steak"
 ];
 
 // Optional image mapping for known items (public/ assets are served from root path "/")
@@ -183,7 +183,7 @@ export default function Layout({ children }: LayoutProps) {
             setRemoveName('');
             setShowRemoveForm(false);
             window.dispatchEvent(new CustomEvent('pantry:refresh'));
-        } catch (e:any) {
+        } catch (e: any) {
             alert(e.message || 'Failed to remove item');
         } finally {
             setRemoving(false);
@@ -233,21 +233,21 @@ export default function Layout({ children }: LayoutProps) {
                 </nav>
 
                 {/* Main Content Area */}
-                <main className="flex-1 ml-64 mr-120 p-6">{children}</main>
+                <main className="flex-1 ml-64 mr-96 p-6">{children}</main>
 
                 {/* Right Sidebar - Pantry (visual style of version 1, dynamic content) */}
                 <div className="w-96 h-screen fixed right-0 top-0 overflow-y-auto bg-[#3f1203]">
                     <div className="p-4">
-                        <div className="flex gap-2 mb-4">
+                        <div className="flex gap-2 mt-6 mb-2">
                             <button
                                 onClick={() => { setShowAddForm(s => !s); setAddError(null); if (showRemoveForm) setShowRemoveForm(false); }}
-                                className="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 text-sm font-semibold py-2 rounded-lg transition-colors border border-amber-300"
+                                className="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 text-sm font-semibold py-2 rounded-lg transition-colors"
                             >
                                 {showAddForm ? 'Cancel' : 'Add Item'}
                             </button>
                             <button
                                 onClick={() => { setShowRemoveForm(s => !s); if (showAddForm) setShowAddForm(false); }}
-                                className="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 text-sm font-semibold py-2 rounded-lg transition-colors border border-amber-300"
+                                className="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 text-sm font-semibold py-2 rounded-lg transition-colors"
                             >
                                 {showRemoveForm ? 'Cancel' : 'Remove Item'}
                             </button>
