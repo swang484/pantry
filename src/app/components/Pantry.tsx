@@ -21,11 +21,11 @@ interface FoodItem extends PantryItem {
 }
 
 const PANTRY_ITEMS: PantryItem[] = [
-  { name: "Lobster", image: "/food_lobster.png", score: 7 },
-  { name: "Rice", image: "/food_rice.png", score: 3 },
-  { name: "Bok Choy", image: "/food_bok_choy.png", score: 3 },
-  { name: "Steak", image: "/food_steak.png", score: 5 },
-  { name: "Carrot", image: "/food_carrot.png", score: 3 },
+  { name: "Lobster", image: "/food_lobster.png", score: 8 },
+  { name: "Rice", image: "/food_rice.png", score: 4 },
+  { name: "Bok Choy", image: "/food_bok_choy.png", score: 4 },
+  { name: "Steak", image: "/food_steak.png", score: 6 },
+  { name: "Carrot", image: "/food_carrot.png", score: 4 },
   { name: "Milk", image: "/food_milk.png", score: 2 },
 ];
 
@@ -47,6 +47,7 @@ interface PantryItemProps {
   score: number;
   onClick: (e: React.MouseEvent) => void;
   disabled: boolean;
+  isUploadPage: boolean;
 }
 
 function PantryItem({
@@ -56,13 +57,16 @@ function PantryItem({
   score,
   onClick,
   disabled,
+  isUploadPage,
 }: PantryItemProps) {
   return (
     <div
       className={`rounded-lg p-4 flex flex-col items-center justify-center transition-all ${
         disabled
           ? "opacity-50 cursor-not-allowed"
-          : "cursor-pointer hover:opacity-90 hover:scale-105"
+          : isUploadPage 
+            ? "cursor-pointer hover:opacity-90 hover:scale-105"
+            : "cursor-default"
       }`}
       onClick={onClick}
     >
@@ -132,8 +136,9 @@ function PantryRow({
               name={item.name}
               image={item.image}
               score={item.score}
-              onClick={() => {}} // Remove the redundant onClick handler
-              disabled={item.disabled || false}
+              onClick={item.onClick}
+              disabled={item.disabled}
+              isUploadPage={item.isUploadPage}
             />
           </motion.div>
         ))}
@@ -155,13 +160,19 @@ export default function Pantry() {
   const { score: currentScore, addToScore } = useUpload();
   const [flyingFoods, setFlyingFoods] = useState<FlyingFood[]>([]);
   const [disabledItems, setDisabledItems] = useState<Set<string>>(new Set());
+  const [scoredItems, setScoredItems] = useState<Set<string>>(new Set());
   const [pantryItems, setPantryItems] = useState<PantryItem[]>(PANTRY_ITEMS);
   const pantryRef = useRef<HTMLDivElement>(null);
+  const [isUploadPage, setIsUploadPage] = useState(false);
 
-  // Calculate total score based on current score and disabled items
-  const totalScore = currentScore + pantryItems.reduce((sum, item, index) => {
-    return sum + (disabledItems.has(`item-${index}`) ? item.score : 0);
-  }, 0);
+  // Check if we're on the upload page
+  useEffect(() => {
+    setIsUploadPage(window.location.pathname === '/upload');
+  }, []);
+
+  // Total score is just the current score from the context
+  // We don't need to calculate it here as it's already managed by the UploadContext
+  const totalScore = currentScore;
 
   const emojiMap: Record<string, string> = {
     Lobster: "🦞",
@@ -173,7 +184,8 @@ export default function Pantry() {
   };
 
   const handleItemClick = (item: FoodItem, e: React.MouseEvent) => {
-    if (!pantryRef.current) return;
+    // Don't do anything if not on upload page
+    if (!isUploadPage || !pantryRef.current) return;
 
     // If item is already disabled, remove it from the pantry
     if (disabledItems.has(item.id)) {
@@ -186,8 +198,13 @@ export default function Pantry() {
       return;
     }
 
-    // Add to score and disable the item
-    addToScore(item.score);
+    // Only add to score if we haven't scored this item before
+    if (!scoredItems.has(item.id)) {
+      addToScore(Math.ceil(item.score / 2)); // Increment by half the item's score, rounded up
+      setScoredItems(prev => new Set(prev).add(item.id));
+    }
+    
+    // Disable the item (gray it out)
     setDisabledItems(prev => new Set(prev).add(item.id));
 
     // Get the position of the pantry for animation
@@ -213,16 +230,18 @@ export default function Pantry() {
       .slice(i, i + ROW_ITEMS)
       .map((item, idx) => {
         const itemId = `item-${i + idx}`;
+        const isDisabled = disabledItems.has(itemId);
         return {
           ...item,
           id: itemId,
-          disabled: disabledItems.has(itemId),
+          disabled: isDisabled,
+          isUploadPage: isUploadPage,
           onClick: (e: React.MouseEvent) =>
             handleItemClick(
               {
                 ...item,
                 id: itemId,
-                disabled: disabledItems.has(itemId),
+                disabled: isDisabled,
               },
               e
             ),
