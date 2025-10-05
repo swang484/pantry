@@ -91,3 +91,27 @@ curl -X POST http://localhost:5000/api/auth/register \
 - No real authentication (mock implementation)
 - CORS enabled for frontend connection
 - Error handling included
+
+## Receipt Items Parsing (OCR / Gemini)
+
+Endpoints (if items route present):
+- `GET /api/items/health` – Shows available strategies (`manual`, `gemini`) and default mode.
+- `POST /api/items/parse` – Multipart upload (field `receipt`). Returns JSON with `items` and `meta`.
+  - Query params:
+    - `mode=gemini` (override to Gemini if not default)
+    - `raw=1` (include raw OCR text in manual mode only)
+    - `rich=1` (include rich parsed lines in manual mode)
+- `GET /api/items/:receiptId` – Retrieve a stored parsed receipt
+- `POST /api/items/compare` – Compare two lists `{ manual: string[], llm: string[] }`
+
+### Environment for Automatic Gemini Parsing
+Add these to `backend/.env` (copy from `env.example`):
+```
+GEMINI_API_KEY=your_key_here
+RECEIPT_PARSER_MODE=gemini
+# Optional: GEMINI_MODEL=gemini-1.5-flash
+```
+With `RECEIPT_PARSER_MODE=gemini`, every `/api/items/parse` call uses Gemini without needing `?mode=gemini`.
+
+If `GEMINI_API_KEY` is missing, manual Tesseract mode is used (or an error if Tesseract not installed).
+

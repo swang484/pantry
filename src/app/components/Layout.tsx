@@ -1,22 +1,106 @@
+"use client";
 import Link from "next/link";
+import React, { useEffect, useState } from "react";
+import { useMemo } from "react";
 
-// Mock data for right sidebar table
-const pantryItems = [
-    { name: "Rice", quantity: "2 lbs", expiry: "2024-02-15" },
-    { name: "Chicken Breast", quantity: "1.5 lbs", expiry: "2024-01-20" },
-    { name: "Tomatoes", quantity: "6 pieces", expiry: "2024-01-18" },
-    { name: "Onions", quantity: "3 pieces", expiry: "2024-02-01" },
-    { name: "Garlic", quantity: "1 bulb", expiry: "2024-01-25" },
-    { name: "Olive Oil", quantity: "1 bottle", expiry: "2024-06-15" },
-    { name: "Pasta", quantity: "3 boxes", expiry: "2024-12-01" },
-    { name: "Cheese", quantity: "8 oz", expiry: "2024-01-22" }
-];
+interface PantryItem {
+    id: number;
+    name: string;
+    quantity: string;
+    expiry: string | null;
+}
+
+interface PantryStats {
+    totalItems: number;
+    expiringSoon: number;
+}
 
 interface LayoutProps {
     children: React.ReactNode;
 }
 
 export default function Layout({ children }: LayoutProps) {
+    const [items, setItems] = useState<PantryItem[]>([]);
+    const [stats, setStats] = useState<PantryStats | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+        let abort = false;
+        async function load(initial = false) {
+            if (initial) setLoading(true);
+            try {
+                const [itemsRes, statsRes] = await Promise.all([
+                    fetch(`${backendBase}/api/pantry`, { cache: 'no-store' }),
+                    fetch(`${backendBase}/api/pantry/stats`, { cache: 'no-store' })
+                ]);
+                if (!itemsRes.ok) throw new Error(`Items fetch failed: ${itemsRes.status}`);
+                if (!statsRes.ok) throw new Error(`Stats fetch failed: ${statsRes.status}`);
+                const [itemsJson, statsJson] = await Promise.all([itemsRes.json(), statsRes.json()]);
+                if (!abort) {
+                    setItems(itemsJson);
+                    setStats(statsJson);
+                    setError(null);
+                }
+            } catch (e: any) {
+                if (!abort) setError(e.message || 'Failed to load pantry data');
+            } finally {
+                if (!abort) setLoading(false);
+            }
+        }
+        load(true);
+        function onRefresh() { load(false); }
+        window.addEventListener('pantry:refresh', onRefresh);
+        return () => { abort = true; window.removeEventListener('pantry:refresh', onRefresh); };
+    }, []);
+
+    const totalItems = stats?.totalItems ?? items.length;
+    const expiringSoon = stats?.expiringSoon ?? 0;
+
+    // Aggregate logic: if multiple DB rows share the same name (e.g., receipt added '1' each time),
+    // we show a single row with quantity = count of occurrences.
+    const aggregated = useMemo(() => {
+        if (!items.length) return [] as PantryItem[];
+        const counts: Record<string, { name: string; qty: number; expiry: string | null }> = {};
+        for (const it of items) {
+            const key = it.name.trim().toLowerCase();
+            if (!counts[key]) {
+                counts[key] = { name: it.name, qty: 1, expiry: it.expiry || null };
+            } else {
+                counts[key].qty += 1;
+                // Keep earliest expiry (if both have expiry dates)
+                if (it.expiry && counts[key].expiry) {
+                    if (new Date(it.expiry) < new Date(counts[key].expiry!)) {
+                        counts[key].expiry = it.expiry;
+                    }
+                } else if (it.expiry && !counts[key].expiry) {
+                    counts[key].expiry = it.expiry;
+                }
+            }
+        }
+        // Map back to PantryItem shape (id is synthetic for keying only)
+        let syntheticId = 1;
+        return Object.values(counts).map(c => ({
+            id: syntheticId++,
+            name: c.name,
+            quantity: String(c.qty),
+            expiry: c.expiry
+        }));
+    }, [items]);
+
+    async function handleClear() {
+        if (!confirm('Clear all pantry items? This cannot be undone.')) return;
+        const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+        try {
+            const resp = await fetch(`${backendBase}/api/pantry`, { method: 'DELETE' });
+            if (!resp.ok) throw new Error(`Clear failed: ${resp.status}`);
+            // trigger refresh
+            window.dispatchEvent(new CustomEvent('pantry:refresh'));
+        } catch (e: any) {
+            alert(e.message || 'Failed to clear pantry');
+        }
+    }
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="flex">
@@ -95,11 +179,20 @@ export default function Layout({ children }: LayoutProps) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {pantryItems.map((item, index) => (
-                                        <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                                            <td className="py-3 px-2 text-gray-800">{item.name}</td>
+                                    {loading && (
+                                        <tr><td colSpan={3} className="py-4 text-center text-gray-500">Loading...</td></tr>
+                                    )}
+                                    {error && !loading && (
+                                        <tr><td colSpan={3} className="py-4 text-center text-red-600 text-sm">{error}</td></tr>
+                                    )}
+                                    {!loading && !error && aggregated.length === 0 && (
+                                        <tr><td colSpan={3} className="py-4 text-center text-gray-500">No items yet</td></tr>
+                                    )}
+                                    {!loading && !error && aggregated.map(item => (
+                                        <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                            <td className="py-3 px-2 text-gray-800 break-all">{item.name}</td>
                                             <td className="py-3 px-2 text-gray-600">{item.quantity}</td>
-                                            <td className="py-3 px-2 text-gray-600">{item.expiry}</td>
+                                            <td className="py-3 px-2 text-gray-600">{item.expiry || '-'}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -107,9 +200,18 @@ export default function Layout({ children }: LayoutProps) {
                         </div>
 
                         {/* Add Item Button */}
-                        <button className="w-full mt-6 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-                            Add Item
-                        </button>
+                        <div className="flex gap-3 mt-6">
+                            <button className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                                Add Item
+                            </button>
+                            <button
+                                onClick={handleClear}
+                                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                                disabled={loading || aggregated.length === 0}
+                            >
+                                Clear
+                            </button>
+                        </div>
 
                         {/* Quick Stats */}
                         <div className="mt-8 p-4 bg-gray-50 rounded-lg">
@@ -117,11 +219,11 @@ export default function Layout({ children }: LayoutProps) {
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Total Items:</span>
-                                    <span className="font-semibold">{pantryItems.length}</span>
+                                    <span className="font-semibold">{loading ? '…' : aggregated.reduce((acc, i) => acc + Number(i.quantity || 0), 0)}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Expiring Soon:</span>
-                                    <span className="font-semibold text-orange-600">3</span>
+                                    <span className="font-semibold text-orange-600">{loading ? '…' : expiringSoon}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Your Points:</span>
