@@ -74,73 +74,107 @@ export default function Upload() {
         <Layout>
             <div className="max-w-6xl mx-auto p-6">
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-800 mb-4">Receipt Upload & Parsing</h1>
-                    <div className="bg-white rounded-lg shadow p-6 mb-8">
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                    <h1 className="text-3xl font-title text-gray-800 mb-4">Receipt Upload & Parsing</h1>
+                    <p className="text-gray-600 mb-8 font-body">
+                        Upload a receipt image and we'll automatically extract ingredients to add to your pantry!
+                    </p>
+
+                    {/* Upload Section */}
+                    <div className="bg-blue-50 rounded-2xl shadow-lg p-8 mb-8 border border-blue-200">
+                        <form onSubmit={handleSubmit} className="space-y-6">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Receipt Image</label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleFileChange}
-                                    className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                />
+                                <label className="block text-lg font-body-bold text-gray-800 mb-3 flex items-center space-x-2">
+                                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <span>Upload Receipt Image</span>
+                                </label>
+                                <div className="border-2 border-dashed border-blue-300 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleFileChange}
+                                        className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-body-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                    />
+                                    <p className="text-sm text-gray-500 mt-2 font-body">
+                                        Supports JPG, PNG, and other image formats
+                                    </p>
+                                </div>
                             </div>
                             <button
                                 type="submit"
                                 disabled={!file || loading}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50 hover:bg-blue-700 transition"
+                                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-body-bold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed flex items-center justify-center space-x-3"
                             >
-                                {loading ? "Parsing..." : "Click here to upload!"}
+                                {loading ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        <span>Parsing Receipt...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        <span>Upload & Parse Receipt</span>
+                                    </>
+                                )}
                             </button>
                         </form>
-                        {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-                        {response && (
-                            <div className="mt-6 p-4 bg-gray-50 rounded-md text-sm space-y-1">
-                                <h2 className="font-semibold text-gray-800 mb-2">Receipt Metadata</h2>
-                                <p><span className="font-medium text-gray-700">Receipt ID:</span> {response.receiptId}</p>
-                                <p><span className="font-medium text-gray-700">Items Detected:</span> {response.meta.count}</p>
-                                <p><span className="font-medium text-gray-700">Strategy:</span> {response.meta.strategy}</p>
-                                {response.meta.timingMs != null && (
-                                    <p><span className="font-medium text-gray-700">Parse Time:</span> {response.meta.timingMs} ms</p>
-                                )}
+
+                        {error && (
+                            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                <p className="text-red-700 font-body">{error}</p>
                             </div>
                         )}
                     </div>
 
-                    {response && response.items?.length > 0 && (
-                        <div className="bg-white rounded-lg shadow p-6 mb-8">
-                            <h2 className="text-xl font-bold text-gray-800 mb-4">Parsed Item Names</h2>
-                            <ul className="list-disc pl-5 space-y-1 text-sm text-gray-800">
-                                {response.items.map((name, idx) => (
-                                    <li key={idx}>{name}</li>
-                                ))}
-                            </ul>
-                            {response.richItems && (
-                                <details className="mt-4">
-                                    <summary className="cursor-pointer text-blue-600 text-sm">Show raw lines</summary>
-                                    <ul className="mt-2 space-y-1 text-xs font-mono bg-gray-50 p-3 rounded border border-gray-200 max-h-64 overflow-auto">
-                                        {response.richItems.map((r, i) => (
-                                            <li key={i}>{r.rawLine}</li>
-                                        ))}
-                                    </ul>
-                                </details>
-                            )}
-                        </div>
-                    )}
+                    {/* Results Section */}
+                    {response && (
+                        <div className="space-y-6">
+                            {/* Success Summary */}
+                            <div className="bg-gray-50 rounded-2xl shadow-lg p-6 border border-gray-200">
+                                <div className="flex items-center space-x-3 mb-4">
+                                    <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+                                    <h2 className="text-xl font-title text-gray-800">Receipt Parsed Successfully!</h2>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-white rounded-lg p-4 text-center">
+                                        <p className="text-2xl font-title text-blue-600">{response.meta.count}</p>
+                                        <p className="text-sm text-gray-600 font-body">Items Detected</p>
+                                    </div>
+                                    {response.meta.timingMs != null && (
+                                        <div className="bg-white rounded-lg p-4 text-center">
+                                            <p className="text-2xl font-title text-blue-600">{(response.meta.timingMs / 1000).toFixed(2)}s</p>
+                                            <p className="text-sm text-gray-600 font-body">Parse Time</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
 
-                    {rawText && (
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <button
-                                onClick={() => setRawOpen(o => !o)}
-                                className="mb-4 text-sm text-blue-600 hover:underline"
-                            >
-                                {rawOpen ? "Hide Raw OCR Text" : "Show Raw OCR Text"}
-                            </button>
-                            {rawOpen && (
-                                <pre className="text-xs whitespace-pre-wrap bg-gray-50 p-4 rounded max-h-96 overflow-auto border border-gray-200">
-                                    {rawText}
-                                </pre>
+                            {/* Ingredients Added */}
+                            {response.items?.length > 0 && (
+                                <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
+                                    <h2 className="text-xl font-title text-gray-800 mb-6 flex items-center space-x-2">
+                                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                        </svg>
+                                        <span>Ingredients Added to Pantry</span>
+                                    </h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {response.items.map((name, idx) => (
+                                            <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center space-x-2">
+                                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                                <span className="text-gray-800 font-body">{name}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
                         </div>
                     )}

@@ -142,7 +142,7 @@ router.post('/', async (req, res) => {
             const tagProfiles = await prisma.profile.findMany({
                 where: { id: { in: tagIds.map(id => parseInt(id)) } }
             });
-            
+
             if (tagProfiles.length !== tagIds.length) {
                 return res.status(400).json({ error: 'One or more tagged profiles not found' });
             }

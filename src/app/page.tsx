@@ -289,10 +289,10 @@ export default function Home() {
       <div className="max-w-6xl mx-auto p-6">
         <div className="mb-8">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-800">Recent Cooks</h1>
+            <h1 className="text-3xl font-title text-gray-800">Recent Cooks</h1>
             <button
               onClick={() => setShowCreateForm(!showCreateForm)}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-body-bold transition-colors flex items-center space-x-2"
             >
               <span>➕</span>
               <span>{showCreateForm ? 'Cancel' : 'Create Post'}</span>
@@ -335,15 +335,15 @@ export default function Home() {
                       )}
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-800">
+                      <p className="font-body-bold text-gray-800">
                         @{post.profile.username}
                         {post.tags && post.tags.length > 0 && (
-                          <span className="text-gray-600">
+                          <span className="text-gray-600 font-body">
                             {' '}with {post.tags.map(tag => `@${tag.username}`).join(', ')}
                           </span>
                         )}
                       </p>
-                      <p className="text-sm text-gray-500">{formatDate(post.createdAt)}</p>
+                      <p className="text-sm text-gray-500 font-body">{formatDate(post.createdAt)}</p>
                     </div>
                   </div>
 
@@ -379,7 +379,7 @@ export default function Home() {
                         name="title"
                         value={editFormData.title}
                         onChange={handleEditFormChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-xl font-bold"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-xl font-title"
                         placeholder="Post title"
                       />
                     </div>
@@ -390,7 +390,7 @@ export default function Home() {
                         value={editFormData.description}
                         onChange={handleEditFormChange}
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 resize-none"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 resize-none font-body"
                         placeholder="Post description"
                       />
                     </div>
@@ -437,7 +437,7 @@ export default function Home() {
                 ) : (
                   // Normal post display
                   <>
-                    <h3 className="text-xl font-bold text-gray-800 mb-3">{post.title}</h3>
+                    <h3 className="text-xl font-title text-gray-800 mb-3">{post.title}</h3>
 
                     <div className="mb-4">
                       <img
@@ -447,7 +447,7 @@ export default function Home() {
                       />
                     </div>
 
-                    <p className="text-gray-700 mb-4">{post.description}</p>
+                    <p className="text-gray-700 mb-4 font-body">{post.description}</p>
                   </>
                 )}
 
@@ -532,14 +532,14 @@ function CreatePostForm({ onSubmit, onCancel, isCreating, currentUser, users }: 
           )}
         </div>
         <div>
-          <h3 className="text-lg font-bold text-gray-800">Create New Post</h3>
-          <p className="text-sm text-gray-500">@{currentUser?.username || 'user'}</p>
+          <h3 className="text-lg font-title text-gray-800">Create New Post</h3>
+          <p className="text-sm text-gray-500 font-body">@{currentUser?.username || 'user'}</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="title" className="block text-sm font-body-bold text-gray-700 mb-2">
             Title
           </label>
           <input
@@ -549,14 +549,14 @@ function CreatePostForm({ onSubmit, onCancel, isCreating, currentUser, users }: 
             value={formData.title}
             onChange={handleChange}
             placeholder="What did you cook?"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 font-body"
             disabled={isCreating}
             required
           />
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="description" className="block text-sm font-body-bold text-gray-700 mb-2">
             Description
           </label>
           <textarea
@@ -566,14 +566,14 @@ function CreatePostForm({ onSubmit, onCancel, isCreating, currentUser, users }: 
             onChange={handleChange}
             placeholder="Tell us about your cooking experience..."
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-900"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-900 font-body"
             disabled={isCreating}
             required
           />
         </div>
 
         <div>
-          <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="image" className="block text-sm font-body-bold text-gray-700 mb-2">
             Image URL
           </label>
           <input
@@ -583,7 +583,7 @@ function CreatePostForm({ onSubmit, onCancel, isCreating, currentUser, users }: 
             value={formData.image}
             onChange={handleChange}
             placeholder="https://example.com/image.jpg"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 font-body"
             disabled={isCreating}
             required
           />

@@ -102,8 +102,8 @@ export default function Recipes() {
         <Layout>
             <div className="max-w-6xl mx-auto p-6">
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-800 mb-4">Recipe Generator</h1>
-                    <p className="text-gray-600 mb-6">
+                    <h1 className="text-3xl font-title text-gray-800 mb-4">Recipe Generator</h1>
+                    <p className="text-gray-600 mb-6 font-body">
                         Generate recipes based on your pantry items: {pantryItems.map(item => item.name).join(', ')}
                     </p>
 
@@ -116,7 +116,7 @@ export default function Recipes() {
                     <button
                         onClick={handleGenerateRecipes}
                         disabled={isLoading}
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold px-8 py-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                        className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:from-gray-400 disabled:to-gray-500 text-white font-body-bold px-8 py-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
                     >
                         {isLoading ? (
                             <div className="flex items-center space-x-2">
@@ -144,14 +144,14 @@ export default function Recipes() {
                                     }}
                                 />
                                 <div className="p-6">
-                                    <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-2">
+                                    <h3 className="text-lg font-title text-gray-800 mb-2 line-clamp-2">
                                         {recipe.title}
                                     </h3>
-                                    <p className="text-sm text-gray-600 mb-2">
+                                    <p className="text-sm text-gray-600 mb-2 font-body">
                                         Source: {recipe.source}
                                     </p>
                                     {recipe.description && (
-                                        <p className="text-sm text-gray-500 mb-4 line-clamp-2">
+                                        <p className="text-sm text-gray-500 mb-4 line-clamp-2 font-body">
                                             {recipe.description}
                                         </p>
                                     )}
@@ -159,7 +159,7 @@ export default function Recipes() {
                                         href={recipe.url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-200"
+                                        className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-body-bold px-4 py-2 rounded-lg transition-colors duration-200"
                                     >
                                         View Recipe
                                     </a>

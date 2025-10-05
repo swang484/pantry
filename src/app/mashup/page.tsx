@@ -30,7 +30,6 @@ export default function Mashup() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
-    const [isMashing, setIsMashing] = useState(false);
 
     // Hardcoded friends with their ingredients
     const friends: Friend[] = [
@@ -73,7 +72,6 @@ export default function Mashup() {
         if (!selectedFriend) return;
 
         setIsLoading(true);
-        setIsMashing(true);
         setError(null);
 
         try {
@@ -81,9 +79,6 @@ export default function Mashup() {
             const myIngredients = pantryItems.map(item => item.name.toLowerCase());
             const friendIngredients = selectedFriend.ingredients.map(ingredient => ingredient.toLowerCase());
             const combinedIngredients = [...new Set([...myIngredients, ...friendIngredients])];
-
-            // Simulate visual effect delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
 
             // Generate recipes using combined ingredients
             const ingredientString = combinedIngredients.join(', ');
@@ -102,7 +97,6 @@ export default function Mashup() {
             setRecipes([]);
         } finally {
             setIsLoading(false);
-            setTimeout(() => setIsMashing(false), 1000);
         }
     };
 
@@ -114,8 +108,8 @@ export default function Mashup() {
         <Layout>
             <div className="max-w-6xl mx-auto p-6">
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-800 mb-4">Mashup</h1>
-                    <p className="text-gray-600 mb-6">
+                    <h1 className="text-3xl font-title text-gray-800 mb-4">Mashup</h1>
+                    <p className="text-gray-600 mb-6 font-body">
                         Combine your pantry ingredients with a friend's to create unique collaborative recipes!
                     </p>
 
@@ -127,7 +121,7 @@ export default function Mashup() {
 
                     {/* Friend Selection */}
                     <div className="bg-white rounded-lg shadow p-6 mb-6">
-                        <h2 className="text-xl font-semibold text-gray-800 mb-4">Choose a Friend to Mashup With</h2>
+                        <h2 className="text-xl font-title text-gray-800 mb-4">Choose a Friend to Mashup With</h2>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {friends.map((friend) => (
                                 <button
@@ -145,8 +139,8 @@ export default function Mashup() {
                                             className="w-12 h-12 rounded-full object-cover"
                                         />
                                         <div className="text-left">
-                                            <h3 className="font-semibold text-gray-800">{friend.name}</h3>
-                                            <p className="text-sm text-gray-600">{friend.ingredients.length} ingredients</p>
+                                            <h3 className="font-body-bold text-gray-800">{friend.name}</h3>
+                                            <p className="text-sm text-gray-600 font-body">{friend.ingredients.length} ingredients</p>
                                         </div>
                                     </div>
                                 </button>
@@ -159,13 +153,13 @@ export default function Mashup() {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                             {/* Your Pantry */}
                             <div className="bg-white rounded-lg shadow p-6">
-                                <h3 className="text-lg font-semibold text-gray-800 mb-4">Your Pantry</h3>
+                                <h3 className="text-lg font-title text-gray-800 mb-4">Your Pantry</h3>
                                 <div className="space-y-2">
                                     {pantryItems.length > 0 ? (
                                         pantryItems.map((item) => (
                                             <div key={item.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                                                <span className="text-gray-800">{item.name}</span>
-                                                <span className="text-sm text-gray-500">{item.quantity}</span>
+                                                <span className="text-gray-800 font-body">{item.name}</span>
+                                                <span className="text-sm text-gray-500 font-body">{item.quantity}</span>
                                             </div>
                                         ))
                                     ) : (
@@ -175,13 +169,13 @@ export default function Mashup() {
                             </div>
 
                             {/* Friend's Ingredients */}
-                            <div className="bg-white rounded-lg shadow p-6">
-                                <h3 className="text-lg font-semibold text-gray-800 mb-4">{selectedFriend.name}'s Pantry</h3>
+                <div className="bg-white rounded-lg shadow p-6">
+                                <h3 className="text-lg font-title text-gray-800 mb-4">{selectedFriend.name}'s Pantry</h3>
                                 <div className="space-y-2">
                                     {selectedFriend.ingredients.map((ingredient, index) => (
                                         <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                                            <span className="text-gray-800">{ingredient}</span>
-                                            <span className="text-sm text-gray-500">Available</span>
+                                            <span className="text-gray-800 font-body">{ingredient}</span>
+                                            <span className="text-sm text-gray-500 font-body">Available</span>
                                         </div>
                                     ))}
                                 </div>
@@ -195,7 +189,7 @@ export default function Mashup() {
                             <button
                                 onClick={handleMashup}
                                 disabled={isLoading || pantryItems.length === 0}
-                                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold px-8 py-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-body-bold px-8 py-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
                             >
                                 {isLoading ? (
                                     <div className="flex items-center space-x-2">
@@ -203,32 +197,17 @@ export default function Mashup() {
                                         <span>Creating Mashup...</span>
                                     </div>
                                 ) : (
-                                    <span>✨ Create Mashup Recipe ✨</span>
+                                    <span>Create Mashup Recipe</span>
                                 )}
                             </button>
                         </div>
                     )}
 
-                    {/* Visual Effect */}
-                    {isMashing && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                            <div className="bg-white rounded-2xl p-8 text-center max-w-md mx-4">
-                                <div className="animate-spin w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                                <h3 className="text-xl font-semibold text-gray-800 mb-2">Mixing Ingredients...</h3>
-                                <p className="text-gray-600">Combining {pantryItems.length} + {selectedFriend?.ingredients.length} ingredients</p>
-                                <div className="mt-4 flex justify-center space-x-2">
-                                    <div className="w-3 h-3 bg-purple-500 rounded-full animate-bounce"></div>
-                                    <div className="w-3 h-3 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
 
                     {/* Recipe Results */}
                     {recipes.length > 0 && (
                         <div>
-                            <h2 className="text-2xl font-bold text-gray-800 mb-6">Mashup Recipes</h2>
+                            <h2 className="text-2xl font-title text-gray-800 mb-6">Mashup Recipes</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
                                 {recipes.map((recipe, index) => (
                                     <div key={index} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 w-full max-w-sm">
@@ -241,11 +220,11 @@ export default function Mashup() {
                                             }}
                                         />
                                         <div className="p-6">
-                                            <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-2">
+                                            <h3 className="text-lg font-title text-gray-800 mb-2 line-clamp-2">
                                                 {recipe.title}
                                             </h3>
                                             {recipe.description && (
-                                                <p className="text-sm text-gray-600 mb-3 line-clamp-3">
+                                                <p className="text-sm text-gray-600 mb-3 line-clamp-3 font-body">
                                                     {recipe.description}
                                                 </p>
                                             )}
