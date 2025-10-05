@@ -33,6 +33,7 @@ app.use('/api/pantry', require('./src/routes/pantry'));
 app.use('/api/cooks', require('./src/routes/cooks'));
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/items', require('./src/routes/items')); // Receipt OCR & parsing
+app.use('/api/recipes', require('./src/routes/recipes'));
 
 // Health check
 app.get('/api/health', (req, res) => {
