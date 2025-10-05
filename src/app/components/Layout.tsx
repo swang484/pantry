@@ -24,6 +24,12 @@ export default function Layout({ children }: LayoutProps) {
     const [stats, setStats] = useState<PantryStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    // Add Item form state
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [addName, setAddName] = useState('');
+    const [addQuantity, setAddQuantity] = useState('1');
+    const [adding, setAdding] = useState(false);
+    const [addError, setAddError] = useState<string | null>(null);
 
     useEffect(() => {
         const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
@@ -65,11 +71,11 @@ export default function Layout({ children }: LayoutProps) {
         const counts: Record<string, { name: string; qty: number; expiry: string | null }> = {};
         for (const it of items) {
             const key = it.name.trim().toLowerCase();
+            const numericQty = parseInt(it.quantity, 10);
             if (!counts[key]) {
-                counts[key] = { name: it.name, qty: 1, expiry: it.expiry || null };
+                counts[key] = { name: it.name, qty: isNaN(numericQty) ? 1 : numericQty, expiry: it.expiry || null };
             } else {
-                counts[key].qty += 1;
-                // Keep earliest expiry (if both have expiry dates)
+                counts[key].qty += isNaN(numericQty) ? 1 : numericQty;
                 if (it.expiry && counts[key].expiry) {
                     if (new Date(it.expiry) < new Date(counts[key].expiry!)) {
                         counts[key].expiry = it.expiry;
@@ -79,7 +85,6 @@ export default function Layout({ children }: LayoutProps) {
                 }
             }
         }
-        // Map back to PantryItem shape (id is synthetic for keying only)
         let syntheticId = 1;
         return Object.values(counts).map(c => ({
             id: syntheticId++,
@@ -88,6 +93,41 @@ export default function Layout({ children }: LayoutProps) {
             expiry: c.expiry
         }));
     }, [items]);
+
+    async function handleAdd(e: React.FormEvent) {
+        e.preventDefault();
+        if (adding) return;
+        const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+        const name = addName.trim();
+        const quantity = addQuantity.trim();
+        if (!name) { setAddError('Name is required'); return; }
+        if (!quantity || isNaN(parseInt(quantity, 10)) || parseInt(quantity, 10) <= 0) {
+            setAddError('Quantity must be a positive number');
+            return;
+        }
+        setAdding(true);
+        setAddError(null);
+        try {
+            const resp = await fetch(`${backendBase}/api/pantry`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, quantity })
+            });
+            if (!resp.ok) {
+                const text = await resp.text();
+                throw new Error(`Add failed (${resp.status}) ${text}`);
+            }
+            setAddName('');
+            setAddQuantity('1');
+            setShowAddForm(false);
+            // Trigger reload
+            window.dispatchEvent(new CustomEvent('pantry:refresh'));
+        } catch (e: any) {
+            setAddError(e.message || 'Failed to add item');
+        } finally {
+            setAdding(false);
+        }
+    }
 
     async function handleClear() {
         if (!confirm('Clear all pantry items? This cannot be undone.')) return;
@@ -209,10 +249,13 @@ export default function Layout({ children }: LayoutProps) {
                             </table>
                         </div>
 
-                        {/* Add Item Button */}
+                        {/* Add / Clear Controls */}
                         <div className="flex gap-3 mt-6">
-                            <button className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-                                Add Item
+                            <button
+                                onClick={() => { setShowAddForm(s => !s); setAddError(null); }}
+                                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                            >
+                                {showAddForm ? 'Cancel' : 'Add Item'}
                             </button>
                             <button
                                 onClick={handleClear}
@@ -222,6 +265,42 @@ export default function Layout({ children }: LayoutProps) {
                                 Clear
                             </button>
                         </div>
+
+                        {showAddForm && (
+                            <form onSubmit={handleAdd} className="mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50 space-y-3">
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Name</label>
+                                    <input
+                                        type="text"
+                                        value={addName}
+                                        onChange={e => setAddName(e.target.value)}
+                                        className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                        placeholder="e.g. chicken breast"
+                                        disabled={adding}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity</label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        value={addQuantity}
+                                        onChange={e => setAddQuantity(e.target.value)}
+                                        className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                        placeholder="1"
+                                        disabled={adding}
+                                    />
+                                </div>
+                                {addError && <p className="text-xs text-red-600">{addError}</p>}
+                                <button
+                                    type="submit"
+                                    disabled={adding}
+                                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md text-sm transition-colors disabled:opacity-60"
+                                >
+                                    {adding ? 'Adding...' : 'Save Item'}
+                                </button>
+                            </form>
+                        )}
 
                         {/* Quick Stats */}
                         <div className="mt-8 p-4 bg-gray-50 rounded-lg">

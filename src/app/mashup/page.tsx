@@ -30,6 +30,8 @@ export default function Mashup() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+    const [usedQuery, setUsedQuery] = useState<string | null>(null);
+    const [attempts, setAttempts] = useState<number | null>(null);
 
     // Hardcoded friends with their ingredients
     const friends: Friend[] = [
@@ -70,39 +72,51 @@ export default function Mashup() {
 
     const handleMashup = async () => {
         if (!selectedFriend) return;
-
         setIsLoading(true);
         setError(null);
-
+        setUsedQuery(null);
+        setAttempts(null);
         try {
-            // Combine ingredients from both pantries
-            const myIngredients = pantryItems.map(item => item.name.toLowerCase());
-            const friendIngredients = selectedFriend.ingredients.map(ingredient => ingredient.toLowerCase());
-            const combinedIngredients = [...new Set([...myIngredients, ...friendIngredients])];
+            // Collect & combine ingredient names (deduped, lowercased for consistency)
+            const myIngredients = pantryItems.map(i => i.name?.toLowerCase().trim()).filter(Boolean);
+            const friendIngredients = selectedFriend.ingredients.map(i => i.toLowerCase().trim()).filter(Boolean);
+            const combined = Array.from(new Set([...myIngredients, ...friendIngredients]));
 
-            // Generate recipes using combined ingredients
-            const ingredientString = combinedIngredients.join(', ');
+            if (!combined.length) {
+                setError('No ingredients available to mash up');
+                return;
+            }
 
-            const response = await fetch(`http://localhost:3001/api/recipes?ingredients=${encodeURIComponent(ingredientString)}`);
+            // The /api/recipes/generate endpoint expects: { ingredients: [{ name: string }, ...] }
+            const payload = {
+                ingredients: combined.map(name => ({ name }))
+            };
+
+            const response = await fetch('http://localhost:3001/api/recipes/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
             if (!response.ok) {
-                throw new Error('Failed to generate recipes');
+                const text = await response.text();
+                throw new Error(`Failed to generate recipes (status ${response.status}) ${text}`);
             }
 
             const data = await response.json();
             setRecipes(data.recipes || []);
-        } catch (error: any) {
-            console.error('Error generating recipes:', error);
-            setError(error.message || 'Failed to generate mashup recipes');
+            setUsedQuery(data.usedQuery || null);
+            setAttempts(typeof data.attempts === 'number' ? data.attempts : null);
+        } catch (e: any) {
+            console.error('Error generating mashup recipes:', e);
+            setError(e.message || 'Failed to generate mashup recipes');
             setRecipes([]);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString();
-    };
+    // (formatDate removed; not used in mashup UI)
 
     return (
         <Layout>
@@ -200,6 +214,9 @@ export default function Mashup() {
                                     <span>Create Mashup Recipe</span>
                                 )}
                             </button>
+                            {usedQuery && (
+                                <p className="mt-4 text-sm text-gray-500 font-body">Used search query: <span className="font-medium text-gray-700">{usedQuery}</span>{attempts !== null && ` (out of ${attempts} attempts)`}</p>
+                            )}
                         </div>
                     )}
 
