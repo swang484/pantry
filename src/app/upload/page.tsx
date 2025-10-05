@@ -80,22 +80,23 @@ export default function Upload() {
                     </p>
 
                     {/* Upload Section */}
-                    <div className="bg-blue-50 rounded-2xl shadow-lg p-8 mb-8 border border-blue-200">
+                    <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 border border-gray-200">
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div>
                                 <label className="block text-lg font-body-bold text-gray-800 mb-3 flex items-center space-x-2">
-                                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#c78883' }}>
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
                                     <span>Upload Receipt Image</span>
                                 </label>
-                                <div className="border-2 border-dashed border-blue-300 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
+                                <div className="border-2 border-dashed rounded-xl p-6 text-center transition-colors" style={{ borderColor: '#c78883' }} onMouseEnter={(e) => e.currentTarget.style.borderColor = '#b87570'} onMouseLeave={(e) => e.currentTarget.style.borderColor = '#c78883'}>
                                     <input
                                         type="file"
                                         accept="image/*"
                                         onChange={handleFileChange}
-                                        className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-body-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                        className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-body-bold file:text-white hover:file:opacity-80"
+                                        style={{ '--file-bg': '#c78883', '--file-hover-bg': '#b87570' } as React.CSSProperties}
                                     />
                                     <p className="text-sm text-gray-500 mt-2 font-body">
                                         Supports JPG, PNG, and other image formats
@@ -105,7 +106,10 @@ export default function Upload() {
                             <button
                                 type="submit"
                                 disabled={!file || loading}
-                                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-body-bold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed flex items-center justify-center space-x-3"
+                                className="w-full disabled:bg-gray-400 text-white font-body-bold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed flex items-center justify-center space-x-3"
+                                style={{ backgroundColor: '#c78883' }}
+                                onMouseEnter={(e) => !(!file || loading) && (e.currentTarget.style.backgroundColor = '#b87570')}
+                                onMouseLeave={(e) => !(!file || loading) && (e.currentTarget.style.backgroundColor = '#c78883')}
                             >
                                 {loading ? (
                                     <>
@@ -145,12 +149,12 @@ export default function Upload() {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="bg-white rounded-lg p-4 text-center">
-                                        <p className="text-2xl font-title text-blue-600">{response.meta.count}</p>
+                                        <p className="text-2xl font-title" style={{ color: '#99c8c9' }}>{response.meta.count}</p>
                                         <p className="text-sm text-gray-600 font-body">Items Detected</p>
                                     </div>
                                     {response.meta.timingMs != null && (
                                         <div className="bg-white rounded-lg p-4 text-center">
-                                            <p className="text-2xl font-title text-blue-600">{(response.meta.timingMs / 1000).toFixed(2)}s</p>
+                                            <p className="text-2xl font-title" style={{ color: '#c78883' }}>{(response.meta.timingMs / 1000).toFixed(2)}s</p>
                                             <p className="text-sm text-gray-600 font-body">Parse Time</p>
                                         </div>
                                     )}
@@ -161,7 +165,7 @@ export default function Upload() {
                             {response.items?.length > 0 && (
                                 <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
                                     <h2 className="text-xl font-title text-gray-800 mb-6 flex items-center space-x-2">
-                                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#c78883' }}>
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                         </svg>
                                         <span>Ingredients Added to Pantry</span>
@@ -169,7 +173,7 @@ export default function Upload() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                         {response.items.map((name, idx) => (
                                             <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center space-x-2">
-                                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#c78883' }}></div>
                                                 <span className="text-gray-800 font-body">{name}</span>
                                             </div>
                                         ))}

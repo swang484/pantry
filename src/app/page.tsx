@@ -292,7 +292,10 @@ export default function Home() {
             <h1 className="text-3xl font-title text-gray-800">Recent Cooks</h1>
             <button
               onClick={() => setShowCreateForm(!showCreateForm)}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-body-bold transition-colors flex items-center space-x-2"
+              className="text-white px-4 py-2 rounded-lg font-body-bold transition-colors flex items-center space-x-2"
+              style={{ backgroundColor: '#c78883' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b87570'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#c78883'}
             >
               <span>➕</span>
               <span>{showCreateForm ? 'Cancel' : 'Create Post'}</span>
@@ -323,7 +326,7 @@ export default function Home() {
               <div key={post.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold overflow-hidden">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold overflow-hidden" style={{ backgroundColor: '#c78883' }}>
                       {post.profile.avatar ? (
                         <img
                           src={post.profile.avatar}
@@ -351,7 +354,10 @@ export default function Home() {
                   <div className="flex items-center space-x-1">
                     <button
                       onClick={() => handleEditPost(post.id)}
-                      className="text-gray-400 hover:text-blue-500 transition-colors p-1 rounded-full hover:bg-blue-50"
+                      className="text-gray-400 transition-colors p-1 rounded-full hover:bg-gray-50"
+                      style={{ '--hover-color': '#c78883' } as React.CSSProperties}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#c78883'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
                       title="Edit post"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -379,7 +385,10 @@ export default function Home() {
                         name="title"
                         value={editFormData.title}
                         onChange={handleEditFormChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-xl font-title"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-gray-900 text-xl font-title"
+                        style={{ '--focus-ring': '#c78883' } as React.CSSProperties}
+                        onFocus={(e) => e.currentTarget.style.boxShadow = '0 0 0 2px #c78883'}
+                        onBlur={(e) => e.currentTarget.style.boxShadow = 'none'}
                         placeholder="Post title"
                       />
                     </div>
@@ -390,7 +399,9 @@ export default function Home() {
                         value={editFormData.description}
                         onChange={handleEditFormChange}
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 resize-none font-body"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-gray-900 resize-none font-body"
+                        onFocus={(e) => e.currentTarget.style.boxShadow = '0 0 0 2px #c78883'}
+                        onBlur={(e) => e.currentTarget.style.boxShadow = 'none'}
                         placeholder="Post description"
                       />
                     </div>
@@ -401,7 +412,9 @@ export default function Home() {
                         name="image"
                         value={editFormData.image}
                         onChange={handleEditFormChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-gray-900"
+                        onFocus={(e) => e.currentTarget.style.boxShadow = '0 0 0 2px #c78883'}
+                        onBlur={(e) => e.currentTarget.style.boxShadow = 'none'}
                         placeholder="Image URL"
                       />
                     </div>
@@ -461,7 +474,7 @@ export default function Home() {
                     </svg>
                     <span>{post.likesCount}</span>
                   </button>
-                  <button className="flex items-center space-x-2 hover:text-blue-500 transition-colors">
+                  <button className="flex items-center space-x-2 transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = '#c78883'} onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
@@ -518,9 +531,9 @@ function CreatePostForm({ onSubmit, onCancel, isCreating, currentUser, users }: 
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-6 border-2 border-blue-200">
+    <div className="bg-white rounded-lg shadow-md p-6 mb-6 border-2 border-gray-200">
       <div className="flex items-center space-x-3 mb-4">
-        <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold overflow-hidden">
+        <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold overflow-hidden" style={{ backgroundColor: '#c78883' }}>
           {currentUser?.avatar ? (
             <img
               src={currentUser.avatar}
@@ -549,7 +562,9 @@ function CreatePostForm({ onSubmit, onCancel, isCreating, currentUser, users }: 
             value={formData.title}
             onChange={handleChange}
             placeholder="What did you cook?"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 font-body"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-gray-900 font-body"
+            onFocus={(e) => e.currentTarget.style.boxShadow = '0 0 0 2px #c78883'}
+            onBlur={(e) => e.currentTarget.style.boxShadow = 'none'}
             disabled={isCreating}
             required
           />
@@ -566,7 +581,9 @@ function CreatePostForm({ onSubmit, onCancel, isCreating, currentUser, users }: 
             onChange={handleChange}
             placeholder="Tell us about your cooking experience..."
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-900 font-body"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 resize-none text-gray-900 font-body"
+            onFocus={(e) => e.currentTarget.style.boxShadow = '0 0 0 2px #c78883'}
+            onBlur={(e) => e.currentTarget.style.boxShadow = 'none'}
             disabled={isCreating}
             required
           />
@@ -583,7 +600,9 @@ function CreatePostForm({ onSubmit, onCancel, isCreating, currentUser, users }: 
             value={formData.image}
             onChange={handleChange}
             placeholder="https://example.com/image.jpg"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 font-body"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-gray-900 font-body"
+            onFocus={(e) => e.currentTarget.style.boxShadow = '0 0 0 2px #c78883'}
+            onBlur={(e) => e.currentTarget.style.boxShadow = 'none'}
             disabled={isCreating}
             required
           />
@@ -605,9 +624,12 @@ function CreatePostForm({ onSubmit, onCancel, isCreating, currentUser, users }: 
                   type="button"
                   onClick={() => handleTagToggle(user.id)}
                   className={`px-3 py-2 rounded-full text-sm border transition-colors ${formData.tagIds.includes(user.id)
-                    ? 'bg-blue-500 text-white border-blue-500'
-                    : 'bg-white text-gray-700 border-gray-300 hover:border-blue-500'
+                    ? 'text-white'
+                    : 'bg-white text-gray-700 border-gray-300'
                     }`}
+                  style={formData.tagIds.includes(user.id) ? { backgroundColor: '#c78883', borderColor: '#c78883' } : {}}
+                  onMouseEnter={(e) => !formData.tagIds.includes(user.id) && (e.currentTarget.style.borderColor = '#c78883')}
+                  onMouseLeave={(e) => !formData.tagIds.includes(user.id) && (e.currentTarget.style.borderColor = '#d1d5db')}
                   disabled={isCreating}
                 >
                   @{user.username}
@@ -646,7 +668,10 @@ function CreatePostForm({ onSubmit, onCancel, isCreating, currentUser, users }: 
           </button>
           <button
             type="submit"
-            className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: '#c78883' }}
+            onMouseEnter={(e) => !isCreating && (e.currentTarget.style.backgroundColor = '#b87570')}
+            onMouseLeave={(e) => !isCreating && (e.currentTarget.style.backgroundColor = '#c78883')}
             disabled={isCreating}
           >
             {isCreating ? 'Creating...' : 'Create Post'}

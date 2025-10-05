@@ -116,7 +116,10 @@ export default function Recipes() {
                     <button
                         onClick={handleGenerateRecipes}
                         disabled={isLoading}
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:from-gray-400 disabled:to-gray-500 text-white font-body-bold px-8 py-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                        className="disabled:from-gray-400 disabled:to-gray-500 text-white font-body-bold px-8 py-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                        style={{ backgroundColor: '#c78883' }}
+                        onMouseEnter={(e) => !isLoading && (e.currentTarget.style.backgroundColor = '#b87570')}
+                        onMouseLeave={(e) => !isLoading && (e.currentTarget.style.backgroundColor = '#c78883')}
                     >
                         {isLoading ? (
                             <div className="flex items-center space-x-2">
@@ -133,16 +136,7 @@ export default function Recipes() {
                 {recipes.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
                         {recipes.map((recipe, index) => (
-                            <div key={index} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 w-full max-w-sm">
-                                <img
-                                    src={recipe.image}
-                                    alt={recipe.title}
-                                    className="w-full h-48 object-cover"
-                                    onError={(e) => {
-                                        console.log('Image failed to load:', recipe.image);
-                                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop';
-                                    }}
-                                />
+                            <div key={index} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 w-full max-w-sm">
                                 <div className="p-6">
                                     <h3 className="text-lg font-title text-gray-800 mb-2 line-clamp-2">
                                         {recipe.title}
@@ -159,7 +153,10 @@ export default function Recipes() {
                                         href={recipe.url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-body-bold px-4 py-2 rounded-lg transition-colors duration-200"
+                                        className="inline-block text-white font-body-bold px-4 py-2 rounded-lg transition-colors duration-200"
+                                        style={{ backgroundColor: '#c78883' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b87570'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#c78883'}
                                     >
                                         View Recipe
                                     </a>

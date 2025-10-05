@@ -63,13 +63,12 @@ function PantryItem({
 }: PantryItemProps) {
   return (
     <div
-      className={`rounded-lg p-4 flex flex-col items-center justify-center transition-all ${
-        disabled
-          ? "opacity-50 cursor-not-allowed"
-          : isUploadPage 
-            ? "cursor-pointer hover:opacity-90 hover:scale-105"
-            : "cursor-default"
-      }`}
+      className={`rounded-lg p-4 flex flex-col items-center justify-center transition-all ${disabled
+        ? "opacity-50 cursor-not-allowed"
+        : isUploadPage
+          ? "cursor-pointer hover:opacity-90 hover:scale-105"
+          : "cursor-default"
+        }`}
       onClick={onClick}
     >
       <div className="w-16 h-16 relative mb-2">
@@ -79,7 +78,7 @@ function PantryItem({
         {name}
       </div>
       {!disabled && (
-        <div className="absolute -left-[5px] top-[20px] bg-amber-500 text-white rounded-full min-w-6 h-6 px-1 flex items-center justify-center text-xs font-bold">
+        <div className="absolute -left-[5px] top-[20px] bg-amber-200 text-amber-900 rounded-full min-w-6 h-6 px-1 flex items-center justify-center text-xs font-bold">
           {typeof quantity === 'number' ? quantity : 1}
         </div>
       )}
@@ -164,7 +163,7 @@ export default function Pantry({ items }: { items?: ExternalPantryItem[] }) {
     if (!scoredItems.has(item.id)) {
       setScoredItems(prev => new Set(prev).add(item.id));
     }
-    
+
     // Disable the item (gray it out)
     setDisabledItems(prev => new Set(prev).add(item.id));
 
@@ -249,7 +248,8 @@ export default function Pantry({ items }: { items?: ExternalPantryItem[] }) {
   return (
     <aside
       ref={pantryRef}
-      className="sticky top-0 h-screen hidden lg:block p-4 bg-[#3f1203] overflow-y-auto w-96 relative"
+      className="sticky top-0 h-screen hidden lg:block p-4 overflow-y-auto w-96 relative"
+      style={{ backgroundColor: '#4d3e36' }}
     >
       <AnimatePresence>
         {flyingFoods.map(({ id, item, startX, startY, endX, endY }) => {
@@ -283,7 +283,7 @@ export default function Pantry({ items }: { items?: ExternalPantryItem[] }) {
       </AnimatePresence>
       {/* Search input removed per request */}
       <div className="relative">
-        <div className="h-1 bg-[#793c1a] rounded-t-lg mb-2"></div>
+        <div className="h-1 rounded-t-lg mb-2" style={{ backgroundColor: '#c9b6ab' }}></div>
 
         <div className="bg-amber-50/5 backdrop-blur-sm rounded-lg p-4">
           <div className="px-4 py-2 font-semibold text-amber-50 text-lg">
@@ -300,7 +300,7 @@ export default function Pantry({ items }: { items?: ExternalPantryItem[] }) {
         </div>
 
         {/* Bottom ledge */}
-        <div className="h-3 bg-[#793c1a] rounded-b-lg mt-2"></div>
+        <div className="h-3 rounded-b-lg mt-2" style={{ backgroundColor: '#c9b6ab' }}></div>
       </div>
     </aside>
   );

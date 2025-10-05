@@ -103,33 +103,66 @@ async function tavilySearch(query) {
     });
     const text = await resp.text();
     let json = {};
-    try { json = JSON.parse(text); } catch { json = { parseError: true, raw: text.slice(0,300) }; }
+    try { json = JSON.parse(text); } catch { json = { parseError: true, raw: text.slice(0, 300) }; }
     return { ok: resp.ok, status: resp.status, json, raw: text };
 }
 
 // Helper function to process Tavily results into recipe format
 function processTavilyResults(tavilyResults) {
-    return tavilyResults.results.slice(0, 3).map((result, index) => ({
-        title: result.title || `Recipe ${index + 1}`,
-        url: result.url,
-        image: getRecipeImage(result, index),
-        source: extractSourceFromUrl(result.url),
-        description: result.content ? result.content.substring(0, 150) + '...' : 'Delicious recipe'
-    }));
+    return tavilyResults.results.slice(0, 3).map((result, index) => {
+        const image = getRecipeImage(result, index);
+        console.log(`[recipes] Processing result ${index}:`, {
+            title: result.title,
+            image_url: result.image_url,
+            images: result.images,
+            hasRawContent: !!result.raw_content,
+            finalImage: image
+        });
+        return {
+            title: result.title || `Recipe ${index + 1}`,
+            url: result.url,
+            image: image,
+            source: extractSourceFromUrl(result.url),
+            description: result.content ? result.content.substring(0, 150) + '...' : 'Delicious recipe'
+        };
+    });
 }
 
 // Helper function to get recipe image from Tavily result
 const getRecipeImage = (result, index) => {
     // Try to get image from Tavily's image_url field first
-    if (result.image_url) {
+    if (result.image_url && isValidImageUrl(result.image_url)) {
         return result.image_url;
     }
 
-    // Try to extract from raw_content
+    // Try to extract from images array if available
+    if (result.images && Array.isArray(result.images) && result.images.length > 0) {
+        for (const img of result.images) {
+            if (isValidImageUrl(img)) {
+                return img;
+            }
+        }
+    }
+
+    // Try to extract from raw_content with multiple patterns
     if (result.raw_content?.includes('img')) {
-        const imgMatch = result.raw_content.match(/<img[^>]+src="([^"]+)"/i);
-        if (imgMatch) {
-            return imgMatch[1];
+        // Try multiple img tag patterns
+        const imgPatterns = [
+            /<img[^>]+src="([^"]+)"/gi,
+            /<img[^>]+src='([^']+)'/gi,
+            /data-src="([^"]+)"/gi,
+            /data-lazy="([^"]+)"/gi,
+            /og:image.*?content="([^"]+)"/gi,
+            /twitter:image.*?content="([^"]+)"/gi
+        ];
+
+        for (const pattern of imgPatterns) {
+            const matches = [...result.raw_content.matchAll(pattern)];
+            for (const match of matches) {
+                if (match[1] && isValidImageUrl(match[1])) {
+                    return match[1];
+                }
+            }
         }
     }
 
@@ -137,10 +170,34 @@ const getRecipeImage = (result, index) => {
     const fallbackImages = [
         'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop', // Pizza
         'https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=400&h=300&fit=crop', // Pasta
-        'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop'  // Stir-fry
+        'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop', // Stir-fry
+        'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&h=300&fit=crop', // Rice bowl
+        'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop', // Pancakes
+        'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=300&fit=crop', // Salad
+        'https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=400&h=300&fit=crop', // Burger
+        'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=400&h=300&fit=crop', // Sandwich
+        'https://images.unsplash.com/photo-1563379091339-03246963d1d3?w=400&h=300&fit=crop'  // Soup
     ];
 
     return fallbackImages[index % fallbackImages.length];
+};
+
+// Helper function to validate image URLs
+const isValidImageUrl = (url) => {
+    if (!url || typeof url !== 'string') return false;
+
+    // Check if it's a valid URL
+    try {
+        new URL(url);
+    } catch {
+        return false;
+    }
+
+    // Check for common image extensions or known image hosting services
+    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$/i;
+    const imageHosts = /\.(unsplash|pexels|pixabay|imgur|cloudinary|amazonaws|googleusercontent)\./i;
+
+    return imageExtensions.test(url) || imageHosts.test(url) || url.includes('image') || url.includes('photo');
 };
 
 // Helper function to extract source name from URL
@@ -155,46 +212,70 @@ const extractSourceFromUrl = (url) => {
 
 // Mock recipe data (fallback when Tavily fails)
 const generateMockRecipes = (ingredients) => {
-    const mockRecipes = [
+    const placeholderImages = [
+        'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop', // Pizza
+        'https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=400&h=300&fit=crop', // Pasta
+        'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop', // Stir-fry
+        'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&h=300&fit=crop', // Rice bowl
+        'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop', // Pancakes
+        'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=300&fit=crop', // Salad
+        'https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=400&h=300&fit=crop', // Burger
+        'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=400&h=300&fit=crop', // Sandwich
+        'https://images.unsplash.com/photo-1563379091339-03246963d1d3?w=400&h=300&fit=crop'  // Soup
+    ];
+
+    const baseRecipes = [
         {
             title: "Chicken and Rice Bowl",
             url: "https://example.com/recipe1",
-            image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop",
             source: "Food Network",
             description: "A delicious one-pot meal with chicken and rice"
         },
         {
             title: "Tomato Pasta with Garlic",
             url: "https://example.com/recipe2",
-            image: "https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=400&h=300&fit=crop",
             source: "AllRecipes",
             description: "Simple pasta dish with fresh tomatoes and garlic"
         },
         {
             title: "Garlic Chicken Stir-Fry",
             url: "https://example.com/recipe3",
-            image: "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop",
             source: "Serious Eats",
             description: "Quick and healthy chicken stir-fry with garlic"
         },
         {
             title: "Cheesy Rice Casserole",
             url: "https://example.com/recipe4",
-            image: "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&h=300&fit=crop",
             source: "BBC Good Food",
             description: "Comforting rice casserole with cheese"
         }
     ];
 
+    // Add images to base recipes
+    const mockRecipes = baseRecipes.map((recipe, index) => ({
+        ...recipe,
+        image: placeholderImages[index % placeholderImages.length]
+    }));
+
     // Filter recipes based on available ingredients (simple matching)
     const ingredientNames = ingredients.map(item => item.name.toLowerCase());
-    return mockRecipes.filter(recipe => {
+    const filteredRecipes = mockRecipes.filter(recipe => {
         const recipeTitle = recipe.title.toLowerCase();
         return ingredientNames.some(ingredient =>
             recipeTitle.includes(ingredient) ||
             ingredient.includes(recipeTitle.split(' ')[0])
         );
-    }).slice(0, 3); // Return max 3 recipes
+    });
+
+    // If no matches, return the first 3 with different images
+    if (filteredRecipes.length === 0) {
+        return mockRecipes.slice(0, 3).map((recipe, index) => ({
+            ...recipe,
+            image: placeholderImages[index % placeholderImages.length]
+        }));
+    }
+
+    return filteredRecipes.slice(0, 3); // Return max 3 recipes
 };
 
 // POST /api/recipes/generate - Generate recipes based on pantry items
@@ -220,18 +301,18 @@ router.post('/generate', async (req, res) => {
         let recipes = [];
         let usedQuery = null;
         const blockedDomains = [
-            'instagram.com','www.instagram.com','m.instagram.com',
-            'facebook.com','www.facebook.com','m.facebook.com','fb.com',
-            'pinterest.com','www.pinterest.com',
-            'reddit.com','www.reddit.com','old.reddit.com',
-            'tiktok.com','www.tiktok.com','vm.tiktok.com',
-            'youtube.com','www.youtube.com','m.youtube.com','youtu.be',
-            'x.com','twitter.com','www.twitter.com','mobile.twitter.com'
+            'instagram.com', 'www.instagram.com', 'm.instagram.com',
+            'facebook.com', 'www.facebook.com', 'm.facebook.com', 'fb.com',
+            'pinterest.com', 'www.pinterest.com',
+            'reddit.com', 'www.reddit.com', 'old.reddit.com',
+            'tiktok.com', 'www.tiktok.com', 'vm.tiktok.com',
+            'youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be',
+            'x.com', 'twitter.com', 'www.twitter.com', 'mobile.twitter.com'
         ];
         const isBlockedHost = (url) => {
             try {
                 const h = new URL(url).hostname.toLowerCase();
-                return blockedDomains.some(b => h === b || h.endsWith('.'+b));
+                return blockedDomains.some(b => h === b || h.endsWith('.' + b));
             } catch { return true; }
         };
 
@@ -248,13 +329,13 @@ router.post('/generate', async (req, res) => {
                 let filtered = allResults.filter(res => res?.url && !isBlockedHost(res.url));
                 // Rank filtered results by how many provided ingredients appear in title/content.
                 if (filtered.length) {
-                    const ingSet = new Set(ingredients.map(i => (i.name||'').toLowerCase()));
+                    const ingSet = new Set(ingredients.map(i => (i.name || '').toLowerCase()));
                     filtered = filtered.map(r => {
-                        const hay = ((r.title||'') + ' ' + (r.content||'')).toLowerCase();
+                        const hay = ((r.title || '') + ' ' + (r.content || '')).toLowerCase();
                         let hits = 0;
                         ingSet.forEach(ing => { if (ing && hay.includes(ing)) hits++; });
                         return { ...r, __hits: hits };
-                    }).sort((a,b) => (b.__hits||0) - (a.__hits||0));
+                    }).sort((a, b) => (b.__hits || 0) - (a.__hits || 0));
                 }
                 const blockedCount = allResults.length - filtered.length;
                 aggregateDebug.push({ query: q, status: r.status, ok: r.ok, rawCount: allResults.length, blockedFiltered: blockedCount, kept: filtered.length });
@@ -277,7 +358,7 @@ router.post('/generate', async (req, res) => {
         }
         res.json({
             recipes,
-            message: `Found ${recipes.length} recipes (tiered search)` ,
+            message: `Found ${recipes.length} recipes (tiered search)`,
             usedQuery,
             attempts: queries.length,
             debug: debug ? aggregateDebug : undefined
@@ -293,32 +374,44 @@ router.post('/generate', async (req, res) => {
 
 // GET /api/recipes - Get all available recipes (for testing)
 router.get('/', (req, res) => {
+    const placeholderImages = [
+        'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop', // Pizza
+        'https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=400&h=300&fit=crop', // Pasta
+        'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop', // Stir-fry
+        'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&h=300&fit=crop', // Rice bowl
+        'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop', // Pancakes
+        'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=300&fit=crop', // Salad
+        'https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=400&h=300&fit=crop', // Burger
+        'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=400&h=300&fit=crop', // Sandwich
+        'https://images.unsplash.com/photo-1563379091339-03246963d1d3?w=400&h=300&fit=crop'  // Soup
+    ];
+
     const allRecipes = [
         {
             title: "Chicken and Rice Bowl",
             url: "https://example.com/recipe1",
-            image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop",
+            image: placeholderImages[0],
             source: "Food Network",
             description: "A delicious one-pot meal with chicken and rice"
         },
         {
             title: "Tomato Pasta with Garlic",
             url: "https://example.com/recipe2",
-            image: "https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=400&h=300&fit=crop",
+            image: placeholderImages[1],
             source: "AllRecipes",
             description: "Simple pasta dish with fresh tomatoes and garlic"
         },
         {
             title: "Garlic Chicken Stir-Fry",
             url: "https://example.com/recipe3",
-            image: "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop",
+            image: placeholderImages[2],
             source: "Serious Eats",
             description: "Quick and healthy chicken stir-fry with garlic"
         },
         {
             title: "Cheesy Rice Casserole",
             url: "https://example.com/recipe4",
-            image: "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&h=300&fit=crop",
+            image: placeholderImages[3],
             source: "BBC Good Food",
             description: "Comforting rice casserole with cheese"
         }
