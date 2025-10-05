@@ -4,7 +4,7 @@ const router = express.Router();
 // Helper function to build search query from ingredients
 const buildRecipeSearchQuery = (ingredients) => {
     const ingredientNames = ingredients.map(item => item.name.toLowerCase());
-    const query = `recipe ${ingredientNames.join(' ')} site:foodnetwork.com OR site:allrecipes.com OR site:seriouseats.com OR site:bbcgoodfood.com`;
+    const query = `recipe ${ingredientNames.join(' ')} site:foodnetwork.com OR site:allrecipes.com OR site:seriouseats.com OR site:bbcgoodfood.com OR site:epicurious.com OR site:bonappetit.com -site:instagram.com -site:facebook.com -site:pinterest.com -site:reddit.com -site:tiktok.com -site:youtube.com`;
     return query;
 };
 
