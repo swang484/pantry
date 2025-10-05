@@ -1,30 +1,39 @@
 "use client";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
-import { useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import Pantry from "./Pantry";
 
-interface PantryItem {
-    id: number;
-    name: string;
-    quantity: string;
-    expiry: string | null;
-}
+// Seed list (shown immediately on first paint, then merged with backend items when they load)
+const SEED_ITEMS = [
+    "rice",
+    "carrot", 
+    "lobster",
+    "milk",
+    "steak" 
+];
 
-interface PantryStats {
-    totalItems: number;
-    expiringSoon: number;
-}
+// Optional image mapping for known items (public/ assets are served from root path "/")
+// Keys are lowercase item names; add aliases if receipt parsing varies naming.
+const IMAGE_MAP: Record<string, string> = {
+    steak: "/food_steak.png",
+    beef: "/food_steak.png",      // alias in case backend returns "beef"
+    rice: "/food_rice.png",
+    milk: "/food_milk.png",
+    lobster: "/food_lobster.png",
+    carrot: "/food_carrot.png"
+};
 
-interface LayoutProps {
-    children: React.ReactNode;
-}
+interface DBPantryItem { id: number; name: string; quantity: string; expiry: string | null; }
+interface PantryStats { totalItems: number; expiringSoon: number; }
+interface LayoutProps { children: React.ReactNode; }
 
 export default function Layout({ children }: LayoutProps) {
-    const [items, setItems] = useState<PantryItem[]>([]);
+    const [dbItems, setDbItems] = useState<DBPantryItem[]>([]);
     const [stats, setStats] = useState<PantryStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Fetch backend pantry + stats
     useEffect(() => {
         const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
         let abort = false;
@@ -39,7 +48,7 @@ export default function Layout({ children }: LayoutProps) {
                 if (!statsRes.ok) throw new Error(`Stats fetch failed: ${statsRes.status}`);
                 const [itemsJson, statsJson] = await Promise.all([itemsRes.json(), statsRes.json()]);
                 if (!abort) {
-                    setItems(itemsJson);
+                    setDbItems(itemsJson);
                     setStats(statsJson);
                     setError(null);
                 }
@@ -55,52 +64,53 @@ export default function Layout({ children }: LayoutProps) {
         return () => { abort = true; window.removeEventListener('pantry:refresh', onRefresh); };
     }, []);
 
-    const totalItems = stats?.totalItems ?? items.length;
-    const expiringSoon = stats?.expiringSoon ?? 0;
+    // Aggregate DB items (collapse duplicates; count occurrences as quantity)
+    const aggregatedNames = useMemo(() => {
+        if (!dbItems.length) return [] as { name: string; count: number }[];
+        const counts: Record<string, number> = {};
+        for (const it of dbItems) {
+            const key = it.name.trim();
+            counts[key] = (counts[key] || 0) + 1;
+        }
+        return Object.entries(counts).map(([name, count]) => ({ name, count }));
+    }, [dbItems]);
 
-    // Aggregate logic: if multiple DB rows share the same name (e.g., receipt added '1' each time),
-    // we show a single row with quantity = count of occurrences.
-    const aggregated = useMemo(() => {
-        if (!items.length) return [] as PantryItem[];
-        const counts: Record<string, { name: string; qty: number; expiry: string | null }> = {};
-        for (const it of items) {
-            const key = it.name.trim().toLowerCase();
-            if (!counts[key]) {
-                counts[key] = { name: it.name, qty: 1, expiry: it.expiry || null };
-            } else {
-                counts[key].qty += 1;
-                // Keep earliest expiry (if both have expiry dates)
-                if (it.expiry && counts[key].expiry) {
-                    if (new Date(it.expiry) < new Date(counts[key].expiry!)) {
-                        counts[key].expiry = it.expiry;
-                    }
-                } else if (it.expiry && !counts[key].expiry) {
-                    counts[key].expiry = it.expiry;
-                }
+    // Merge seed + backend names (preserve seed ordering first, then new names)
+    const mergedPantryItems = useMemo(() => {
+        const seen = new Set<string>();
+        // Build a quick lookup for counts
+        const countMap: Record<string, number> = {};
+        for (const a of aggregatedNames) {
+            countMap[a.name.toLowerCase()] = a.count;
+        }
+        const list: { name: string; score: number; image?: string; quantity: number }[] = [];
+        // Seed first (use DB count if present, else 1)
+        for (const seed of SEED_ITEMS) {
+            const key = seed.toLowerCase();
+            const qty = countMap[key] || 1;
+            seen.add(key);
+            list.push({
+                name: seed,
+                score: 4,
+                image: IMAGE_MAP[key],
+                quantity: qty
+            });
+        }
+        // Add dynamic ones not already present
+        for (const dyn of aggregatedNames) {
+            const key = dyn.name.toLowerCase();
+            if (!seen.has(key)) {
+                list.push({
+                    name: dyn.name,
+                    score: Math.min(8, 2 + dyn.count),
+                    image: IMAGE_MAP[key],
+                    quantity: dyn.count
+                });
             }
         }
-        // Map back to PantryItem shape (id is synthetic for keying only)
-        let syntheticId = 1;
-        return Object.values(counts).map(c => ({
-            id: syntheticId++,
-            name: c.name,
-            quantity: String(c.qty),
-            expiry: c.expiry
-        }));
-    }, [items]);
+        return list;
+    }, [aggregatedNames]);
 
-    async function handleClear() {
-        if (!confirm('Clear all pantry items? This cannot be undone.')) return;
-        const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
-        try {
-            const resp = await fetch(`${backendBase}/api/pantry`, { method: 'DELETE' });
-            if (!resp.ok) throw new Error(`Clear failed: ${resp.status}`);
-            // trigger refresh
-            window.dispatchEvent(new CustomEvent('pantry:refresh'));
-        } catch (e: any) {
-            alert(e.message || 'Failed to clear pantry');
-        }
-    }
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="flex">
@@ -110,46 +120,37 @@ export default function Layout({ children }: LayoutProps) {
                         <h1 className="text-2xl font-bold text-gray-800 mb-8">Pantry</h1>
                         <ul className="space-y-4">
                             <li>
-                                <Link
-                                    href="/"
-                                    className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-3 rounded-lg transition-colors"
-                                >
+                                <Link href="/" className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-3 rounded-lg transition-colors">
                                     <span className="text-xl">🏠</span>
                                     <span>Home</span>
                                 </Link>
                             </li>
                             <li>
-                                <Link
-                                    href="/profile"
-                                    className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-3 rounded-lg transition-colors"
-                                >
+                                <Link href="/profile" className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-3 rounded-lg transition-colors">
                                     <span className="text-xl">👤</span>
                                     <span>Profile</span>
                                 </Link>
                             </li>
                             <li>
-                                <Link
-                                    href="/recipes"
-                                    className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-3 rounded-lg transition-colors"
-                                >
+                                <Link href="/recipes" className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-3 rounded-lg transition-colors">
                                     <span className="text-xl">📖</span>
                                     <span>Recipes</span>
                                 </Link>
                             </li>
                             <li>
-                                <Link
-                                    href="/mashup"
-                                    className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-3 rounded-lg transition-colors"
-                                >
+                                <Link href="/mashup" className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-3 rounded-lg transition-colors">
                                     <span className="text-xl">🍽️</span>
                                     <span>Mashup</span>
                                 </Link>
                             </li>
                             <li>
-                                <Link
-                                    href="/upload"
-                                    className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-3 rounded-lg transition-colors"
-                                >
+                                <Link href="/create" className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-3 rounded-lg transition-colors">
+                                    <span className="text-xl">✨</span>
+                                    <span>Create</span>
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/upload" className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-3 rounded-lg transition-colors">
                                     <span className="text-xl">📤</span>
                                     <span>Upload</span>
                                 </Link>
@@ -159,80 +160,12 @@ export default function Layout({ children }: LayoutProps) {
                 </nav>
 
                 {/* Main Content Area */}
-                <main className="flex-1 ml-64 mr-120 p-6">
-                    {children}
-                </main>
+                <main className="flex-1 ml-64 mr-120 p-6">{children}</main>
 
-                {/* Right Sidebar */}
-                <aside className="w-120 bg-white shadow-lg h-screen fixed right-0 top-0 overflow-y-auto">
-                    <div className="p-6">
-                        <h3 className="text-xl font-bold text-gray-800 mb-6">Your Pantry</h3>
-
-                        {/* Pantry Items Table */}
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-gray-200">
-                                        <th className="text-left py-3 px-2 font-semibold text-gray-700">Item</th>
-                                        <th className="text-left py-3 px-2 font-semibold text-gray-700">Qty</th>
-                                        <th className="text-left py-3 px-2 font-semibold text-gray-700">Expires</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loading && (
-                                        <tr><td colSpan={3} className="py-4 text-center text-gray-500">Loading...</td></tr>
-                                    )}
-                                    {error && !loading && (
-                                        <tr><td colSpan={3} className="py-4 text-center text-red-600 text-sm">{error}</td></tr>
-                                    )}
-                                    {!loading && !error && aggregated.length === 0 && (
-                                        <tr><td colSpan={3} className="py-4 text-center text-gray-500">No items yet</td></tr>
-                                    )}
-                                    {!loading && !error && aggregated.map(item => (
-                                        <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
-                                            <td className="py-3 px-2 text-gray-800 break-all">{item.name}</td>
-                                            <td className="py-3 px-2 text-gray-600">{item.quantity}</td>
-                                            <td className="py-3 px-2 text-gray-600">{item.expiry || '-'}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Add Item Button */}
-                        <div className="flex gap-3 mt-6">
-                            <button className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-                                Add Item
-                            </button>
-                            <button
-                                onClick={handleClear}
-                                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
-                                disabled={loading || aggregated.length === 0}
-                            >
-                                Clear
-                            </button>
-                        </div>
-
-                        {/* Quick Stats */}
-                        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-                            <h4 className="font-semibold text-gray-800 mb-3">Quick Stats</h4>
-                            <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Total Items:</span>
-                                    <span className="font-semibold">{loading ? '…' : aggregated.reduce((acc, i) => acc + Number(i.quantity || 0), 0)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Expiring Soon:</span>
-                                    <span className="font-semibold text-orange-600">{loading ? '…' : expiringSoon}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Your Points:</span>
-                                    <span className="font-semibold text-green-600">1,247</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </aside>
+                {/* Right Sidebar - Pantry (visual style of version 1, dynamic content) */}
+                <div className="w-96 h-screen fixed right-0 top-0 overflow-y-auto bg-[#3f1203]">
+                    <Pantry items={mergedPantryItems} />
+                </div>
             </div>
         </div>
     );
