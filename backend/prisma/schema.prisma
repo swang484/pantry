@@ -18,3 +18,52 @@ model PantryItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Profile {
+  id          Int      @id @default(autoincrement())
+  name        String
+  username    String   @unique
+  email       String   @unique
+  avatar      String?
+  bio         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  posts       Post[]
+  likes       Like[]
+  comments    Comment[]
+}
+
+model Post {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  image       String
+  profileId   Int
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  likes       Like[]
+  comments    Comment[]
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  profileId Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  
+  @@unique([postId, profileId])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  postId    Int
+  profileId Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

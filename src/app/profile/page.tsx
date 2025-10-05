@@ -1,8 +1,9 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Layout from "../components/Layout";
 
 interface ProfileData {
+    id: number;
     profilePicture: string | null;
     displayName: string;
     username: string;
@@ -15,23 +16,31 @@ interface ProfileData {
         github: string;
         website: string;
     };
+    stats?: {
+        posts: number;
+        likes: number;
+        comments: number;
+    };
 }
 
 export default function Profile() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isEditing, setIsEditing] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [profileData, setProfileData] = useState<ProfileData>({
+        id: 1,
         profilePicture: null,
-        displayName: "Chef Sarah",
-        username: "chef_sarah",
-        email: "sarah@example.com",
+        displayName: "Loading...",
+        username: "loading",
+        email: "loading@example.com",
         password: "••••••••",
-        bio: "Passionate home cook who loves experimenting with pantry ingredients! 🍳✨",
+        bio: "Loading...",
         socialLinks: {
-            twitter: "@chef_sarah",
-            instagram: "@chef_sarah_kitchen",
-            github: "github.com/chef-sarah",
-            website: "chefsarah.com"
+            twitter: "",
+            instagram: "",
+            github: "",
+            website: ""
         }
     });
 
@@ -39,16 +48,105 @@ export default function Profile() {
 
     const [editData, setEditData] = useState<ProfileData>(profileData);
 
+    // Fetch profile data on component mount
+    useEffect(() => {
+        const fetchProfileData = async () => {
+            try {
+                const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+
+                // Fetch the first profile as current user (same logic as main page)
+                const response = await fetch(`${backendBase}/api/profiles`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch profile: ${response.status}`);
+                }
+
+                const profiles = await response.json();
+                if (profiles.length > 0) {
+                    const currentProfile = profiles[0];
+                    const profileInfo: ProfileData = {
+                        id: currentProfile.id,
+                        profilePicture: currentProfile.avatar,
+                        displayName: currentProfile.name,
+                        username: currentProfile.username,
+                        email: currentProfile.email,
+                        password: "••••••••",
+                        bio: currentProfile.bio || "No bio yet. Tell us about yourself!",
+                        socialLinks: {
+                            twitter: "",
+                            instagram: "",
+                            github: "",
+                            website: ""
+                        },
+                        stats: {
+                            posts: currentProfile._count?.posts || 0,
+                            likes: currentProfile._count?.likes || 0,
+                            comments: currentProfile._count?.comments || 0
+                        }
+                    };
+
+                    setProfileData(profileInfo);
+                    setEditData(profileInfo);
+                }
+                setError(null);
+            } catch (err: any) {
+                console.error('Error fetching profile:', err);
+                setError(err.message || 'Failed to load profile');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProfileData();
+    }, []);
+
     const handleEdit = () => {
         setEditData(profileData);
         setTempPassword(editData.password);
         setIsEditing(true);
     };
 
-    const handleSave = () => {
-        setProfileData(editData);
-        setTempPassword("••••••••");
-        setIsEditing(false);
+    const handleSave = async () => {
+        try {
+            const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+
+            const response = await fetch(`${backendBase}/api/profiles/${profileData.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: editData.displayName,
+                    username: editData.username,
+                    email: editData.email,
+                    avatar: editData.profilePicture,
+                    bio: editData.bio
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to update profile: ${response.status}`);
+            }
+
+            const updatedProfile = await response.json();
+
+            // Update local state with the response
+            const updatedProfileData: ProfileData = {
+                ...editData,
+                id: updatedProfile.id,
+                displayName: updatedProfile.name,
+                username: updatedProfile.username,
+                email: updatedProfile.email,
+                profilePicture: updatedProfile.avatar,
+                bio: updatedProfile.bio
+            };
+
+            setProfileData(updatedProfileData);
+            setTempPassword("••••••••");
+            setIsEditing(false);
+        } catch (err: any) {
+            console.error('Error updating profile:', err);
+            alert('Failed to update profile. Please try again.');
+        }
     };
 
     const handleCancel = () => {
@@ -93,6 +191,40 @@ export default function Profile() {
         fileInputRef.current?.click();
     };
 
+    if (loading) {
+        return (
+            <Layout>
+                <div className="max-w-6xl mx-auto p-6">
+                    <div className="text-center py-12">
+                        <div className="text-6xl mb-4">👤</div>
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">Loading Profile...</h3>
+                        <p className="text-gray-600">Fetching your profile information</p>
+                    </div>
+                </div>
+            </Layout>
+        );
+    }
+
+    if (error) {
+        return (
+            <Layout>
+                <div className="max-w-6xl mx-auto p-6">
+                    <div className="text-center py-12">
+                        <div className="text-6xl mb-4">❌</div>
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">Failed to Load Profile</h3>
+                        <p className="text-gray-600 mb-4">{error}</p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+            </Layout>
+        );
+    }
+
     return (
         <Layout>
             <div className="max-w-6xl mx-auto p-6">
@@ -104,7 +236,7 @@ export default function Profile() {
                             {isEditing ? (
                                 <div className="relative">
                                     <img
-                                        src={editData.profilePicture || "/default-avatar.png"}
+                                        src={editData.profilePicture || "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=150&h=150&fit=crop&crop=face"}
                                         alt="Profile"
                                         className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl cursor-pointer"
                                         onClick={triggerFileInput}
@@ -317,20 +449,20 @@ export default function Profile() {
                             <h3 className="text-xl font-bold text-gray-800 mb-6">Your Stats</h3>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-gray-100 rounded-xl p-4 text-center">
-                                    <p className="text-2xl font-bold text-blue-600">1,247</p>
-                                    <p className="text-sm text-gray-600">Points Earned</p>
+                                    <p className="text-2xl font-bold text-blue-600">{profileData.stats?.posts || 0}</p>
+                                    <p className="text-sm text-gray-600">Posts Created</p>
                                 </div>
                                 <div className="bg-gray-100 rounded-xl p-4 text-center">
-                                    <p className="text-2xl font-bold text-green-600">42</p>
-                                    <p className="text-sm text-gray-600">Cooks Shared</p>
+                                    <p className="text-2xl font-bold text-green-600">{profileData.stats?.likes || 0}</p>
+                                    <p className="text-sm text-gray-600">Likes Given</p>
                                 </div>
                                 <div className="bg-gray-100 rounded-xl p-4 text-center">
-                                    <p className="text-2xl font-bold text-purple-600">156</p>
-                                    <p className="text-sm text-gray-600">Items in Pantry</p>
+                                    <p className="text-2xl font-bold text-purple-600">{profileData.stats?.comments || 0}</p>
+                                    <p className="text-sm text-gray-600">Comments Made</p>
                                 </div>
                                 <div className="bg-gray-100 rounded-xl p-4 text-center">
-                                    <p className="text-2xl font-bold text-orange-600">28</p>
-                                    <p className="text-sm text-gray-600">Followers</p>
+                                    <p className="text-2xl font-bold text-orange-600">{profileData.stats?.posts || 0}</p>
+                                    <p className="text-sm text-gray-600">Total Engagement</p>
                                 </div>
                             </div>
                         </div>
