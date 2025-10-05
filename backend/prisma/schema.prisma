@@ -31,6 +31,7 @@ model Profile {
   posts       Post[]
   likes       Like[]
   comments    Comment[]
+  tags        PostTag[]
 }
 
 model Post {
@@ -44,6 +45,7 @@ model Post {
   updatedAt   DateTime @updatedAt
   likes       Like[]
   comments    Comment[]
+  tags        PostTag[]
 }
 
 model Like {
@@ -66,4 +68,15 @@ model Comment {
   profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model PostTag {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  profileId Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, profileId])
 }

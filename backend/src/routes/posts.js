@@ -15,6 +15,18 @@ router.get('/', async (req, res) => {
                         avatar: true
                     }
                 },
+                tags: {
+                    include: {
+                        profile: {
+                            select: {
+                                id: true,
+                                name: true,
+                                username: true,
+                                avatar: true
+                            }
+                        }
+                    }
+                },
                 _count: {
                     select: {
                         likes: true,
@@ -27,7 +39,7 @@ router.get('/', async (req, res) => {
             }
         });
 
-        // Transform the response to include counts
+        // Transform the response to include counts and tags
         const postsWithCounts = posts.map(post => ({
             id: post.id,
             title: post.title,
@@ -36,6 +48,7 @@ router.get('/', async (req, res) => {
             createdAt: post.createdAt,
             updatedAt: post.updatedAt,
             profile: post.profile,
+            tags: post.tags.map(tag => tag.profile),
             likesCount: post._count.likes,
             commentsCount: post._count.comments
         }));
@@ -107,7 +120,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/posts - Create a new post
 router.post('/', async (req, res) => {
     try {
-        const { title, description, image, profileId } = req.body;
+        const { title, description, image, profileId, tagIds = [] } = req.body;
 
         if (!title || !description || !image || !profileId) {
             return res.status(400).json({
@@ -124,13 +137,60 @@ router.post('/', async (req, res) => {
             return res.status(404).json({ error: 'Profile not found' });
         }
 
-        const post = await prisma.post.create({
-            data: {
-                title,
-                description,
-                image,
-                profileId: parseInt(profileId)
-            },
+        // Validate tag IDs if provided
+        if (tagIds.length > 0) {
+            const tagProfiles = await prisma.profile.findMany({
+                where: { id: { in: tagIds.map(id => parseInt(id)) } }
+            });
+            
+            if (tagProfiles.length !== tagIds.length) {
+                return res.status(400).json({ error: 'One or more tagged profiles not found' });
+            }
+        }
+
+        // Create post with tags in a transaction
+        const post = await prisma.$transaction(async (tx) => {
+            const newPost = await tx.post.create({
+                data: {
+                    title,
+                    description,
+                    image,
+                    profileId: parseInt(profileId)
+                },
+                include: {
+                    profile: {
+                        select: {
+                            id: true,
+                            name: true,
+                            username: true,
+                            avatar: true
+                        }
+                    },
+                    _count: {
+                        select: {
+                            likes: true,
+                            comments: true
+                        }
+                    }
+                }
+            });
+
+            // Create tags if provided
+            if (tagIds.length > 0) {
+                await tx.postTag.createMany({
+                    data: tagIds.map(tagId => ({
+                        postId: newPost.id,
+                        profileId: parseInt(tagId)
+                    }))
+                });
+            }
+
+            return newPost;
+        });
+
+        // Fetch the complete post with tags
+        const completePost = await prisma.post.findUnique({
+            where: { id: post.id },
             include: {
                 profile: {
                     select: {
@@ -138,6 +198,18 @@ router.post('/', async (req, res) => {
                         name: true,
                         username: true,
                         avatar: true
+                    }
+                },
+                tags: {
+                    include: {
+                        profile: {
+                            select: {
+                                id: true,
+                                name: true,
+                                username: true,
+                                avatar: true
+                            }
+                        }
                     }
                 },
                 _count: {
@@ -150,15 +222,16 @@ router.post('/', async (req, res) => {
         });
 
         const postWithCounts = {
-            id: post.id,
-            title: post.title,
-            description: post.description,
-            image: post.image,
-            createdAt: post.createdAt,
-            updatedAt: post.updatedAt,
-            profile: post.profile,
-            likesCount: post._count.likes,
-            commentsCount: post._count.comments
+            id: completePost.id,
+            title: completePost.title,
+            description: completePost.description,
+            image: completePost.image,
+            createdAt: completePost.createdAt,
+            updatedAt: completePost.updatedAt,
+            profile: completePost.profile,
+            tags: completePost.tags.map(tag => tag.profile),
+            likesCount: completePost._count.likes,
+            commentsCount: completePost._count.comments
         };
 
         res.status(201).json(postWithCounts);

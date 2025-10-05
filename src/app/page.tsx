@@ -14,6 +14,12 @@ interface Post {
     username: string;
     avatar: string | null;
   };
+  tags: {
+    id: number;
+    name: string;
+    username: string;
+    avatar: string | null;
+  }[];
   likesCount: number;
   commentsCount: number;
 }
@@ -24,6 +30,18 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [editingPost, setEditingPost] = useState<number | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    description: '',
+    image: ''
+  });
+  const [users, setUsers] = useState<{
+    id: number;
+    name: string;
+    username: string;
+    avatar: string | null;
+  }[]>([]);
   const [currentUser, setCurrentUser] = useState<{
     id: number;
     name: string;
@@ -44,11 +62,11 @@ export default function Home() {
         const postsData = await postsResponse.json();
         setPosts(postsData);
 
-        // For now, we'll use the first profile as the current user
-        // In a real app, this would come from authentication
+        // Fetch profiles for current user and tagging
         const profilesResponse = await fetch(`${backendBase}/api/profiles`);
         if (profilesResponse.ok) {
           const profilesData = await profilesResponse.json();
+          setUsers(profilesData);
           if (profilesData.length > 0) {
             setCurrentUser(profilesData[0]); // Use first profile as current user
           }
@@ -98,6 +116,90 @@ export default function Home() {
     }
   };
 
+  const handleDeletePost = async (postId: number) => {
+    if (!confirm('Are you sure you want to delete this post?')) {
+      return;
+    }
+
+    try {
+      const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+      const response = await fetch(`${backendBase}/api/posts/${postId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete post: ${response.status}`);
+      }
+
+      // Remove the post from the local state
+      setPosts(posts.filter(post => post.id !== postId));
+    } catch (err: any) {
+      console.error('Error deleting post:', err);
+      alert('Failed to delete post. Please try again.');
+    }
+  };
+
+  const handleEditPost = (postId: number) => {
+    const post = posts.find(p => p.id === postId);
+    if (post) {
+      setEditingPost(postId);
+      setEditFormData({
+        title: post.title,
+        description: post.description,
+        image: post.image
+      });
+    }
+  };
+
+  const handleSaveEdit = async (postId: number) => {
+    try {
+      const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+      const response = await fetch(`${backendBase}/api/posts/${postId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: editFormData.title,
+          description: editFormData.description,
+          image: editFormData.image
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update post: ${response.status}`);
+      }
+
+      const updatedPost = await response.json();
+
+      // Update the posts state with the edited post
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === postId
+            ? { ...post, title: updatedPost.title, description: updatedPost.description, image: updatedPost.image }
+            : post
+        )
+      );
+
+      setEditingPost(null);
+    } catch (err: any) {
+      console.error('Error updating post:', err);
+      alert('Failed to update post. Please try again.');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPost(null);
+    setEditFormData({ title: '', description: '', image: '' });
+  };
+
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setEditFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -108,7 +210,7 @@ export default function Home() {
     });
   };
 
-  const handleCreatePost = async (formData: { title: string; description: string; image: string }) => {
+  const handleCreatePost = async (formData: { title: string; description: string; image: string; tagIds: number[] }) => {
     setIsCreating(true);
     try {
       const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
@@ -184,16 +286,18 @@ export default function Home() {
 
   return (
     <Layout>
-      <div className="max-w-2xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Recent Cooks</h2>
-          <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
-          >
-            <span>➕</span>
-            <span>{showCreateForm ? 'Cancel' : 'Create Post'}</span>
-          </button>
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="mb-8">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold text-gray-800">Recent Cooks</h1>
+            <button
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+            >
+              <span>➕</span>
+              <span>{showCreateForm ? 'Cancel' : 'Create Post'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Create Post Form - always show when toggled */}
@@ -203,6 +307,7 @@ export default function Home() {
             onCancel={() => setShowCreateForm(false)}
             isCreating={isCreating}
             currentUser={currentUser}
+            users={users}
           />
         )}
 
@@ -216,46 +321,150 @@ export default function Home() {
           <div className="space-y-6">
             {posts.map((post) => (
               <div key={post.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold overflow-hidden">
-                    {post.profile.avatar ? (
-                      <img
-                        src={post.profile.avatar}
-                        alt={post.profile.name}
-                        className="w-full h-full object-cover"
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold overflow-hidden">
+                      {post.profile.avatar ? (
+                        <img
+                          src={post.profile.avatar}
+                          alt={post.profile.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        post.profile.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-800">
+                        @{post.profile.username}
+                        {post.tags && post.tags.length > 0 && (
+                          <span className="text-gray-600">
+                            {' '}with {post.tags.map(tag => `@${tag.username}`).join(', ')}
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-sm text-gray-500">{formatDate(post.createdAt)}</p>
+                    </div>
+                  </div>
+
+                  {/* Edit and Delete buttons - visible on all posts */}
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => handleEditPost(post.id)}
+                      className="text-gray-400 hover:text-blue-500 transition-colors p-1 rounded-full hover:bg-blue-50"
+                      title="Edit post"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDeletePost(post.id)}
+                      className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50"
+                      title="Delete post"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {editingPost === post.id ? (
+                  // Edit form
+                  <div className="space-y-4">
+                    <div>
+                      <input
+                        type="text"
+                        name="title"
+                        value={editFormData.title}
+                        onChange={handleEditFormChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-xl font-bold"
+                        placeholder="Post title"
                       />
-                    ) : (
-                      post.profile.name.charAt(0).toUpperCase()
+                    </div>
+
+                    <div>
+                      <textarea
+                        name="description"
+                        value={editFormData.description}
+                        onChange={handleEditFormChange}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 resize-none"
+                        placeholder="Post description"
+                      />
+                    </div>
+
+                    <div>
+                      <input
+                        type="url"
+                        name="image"
+                        value={editFormData.image}
+                        onChange={handleEditFormChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                        placeholder="Image URL"
+                      />
+                    </div>
+
+                    {editFormData.image && (
+                      <div>
+                        <img
+                          src={editFormData.image}
+                          alt="Preview"
+                          className="w-full h-48 object-cover rounded-lg border"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
                     )}
+
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleSaveEdit(post.id)}
+                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-800">@{post.profile.username}</p>
-                    <p className="text-sm text-gray-500">{formatDate(post.createdAt)}</p>
-                  </div>
-                </div>
+                ) : (
+                  // Normal post display
+                  <>
+                    <h3 className="text-xl font-bold text-gray-800 mb-3">{post.title}</h3>
 
-                <h3 className="text-xl font-bold text-gray-800 mb-3">{post.title}</h3>
+                    <div className="mb-4">
+                      <img
+                        src={post.image}
+                        alt={post.title}
+                        className="w-full h-64 object-cover rounded-lg"
+                      />
+                    </div>
 
-                <div className="mb-4">
-                  <img
-                    src={post.image}
-                    alt={post.title}
-                    className="w-full h-64 object-cover rounded-lg"
-                  />
-                </div>
-
-                <p className="text-gray-700 mb-4">{post.description}</p>
+                    <p className="text-gray-700 mb-4">{post.description}</p>
+                  </>
+                )}
 
                 <div className="flex items-center space-x-6 text-gray-500">
                   <button
                     onClick={() => handleLike(post.id)}
                     className="flex items-center space-x-2 hover:text-red-500 transition-colors"
                   >
-                    <span>❤️</span>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
                     <span>{post.likesCount}</span>
                   </button>
                   <button className="flex items-center space-x-2 hover:text-blue-500 transition-colors">
-                    <span>💬</span>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
                     <span>{post.commentsCount}</span>
                   </button>
                 </div>
@@ -269,16 +478,18 @@ export default function Home() {
 }
 
 // Create Post Form Component
-function CreatePostForm({ onSubmit, onCancel, isCreating, currentUser }: {
-  onSubmit: (data: { title: string; description: string; image: string }) => void;
+function CreatePostForm({ onSubmit, onCancel, isCreating, currentUser, users }: {
+  onSubmit: (data: { title: string; description: string; image: string; tagIds: number[] }) => void;
   onCancel: () => void;
   isCreating: boolean;
   currentUser: { id: number; name: string; username: string; avatar: string | null } | null;
+  users: { id: number; name: string; username: string; avatar: string | null }[];
 }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    image: ''
+    image: '',
+    tagIds: [] as number[]
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -294,6 +505,15 @@ function CreatePostForm({ onSubmit, onCancel, isCreating, currentUser }: {
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
+    }));
+  };
+
+  const handleTagToggle = (userId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      tagIds: prev.tagIds.includes(userId)
+        ? prev.tagIds.filter(id => id !== userId)
+        : [...prev.tagIds, userId]
     }));
   };
 
@@ -369,6 +589,33 @@ function CreatePostForm({ onSubmit, onCancel, isCreating, currentUser }: {
           />
           <p className="text-xs text-gray-500 mt-1">
             Tip: You can use Unsplash URLs like https://images.unsplash.com/photo-...
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Tag Users (optional)
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {users
+              .filter(user => user.id !== currentUser?.id)
+              .map(user => (
+                <button
+                  key={user.id}
+                  type="button"
+                  onClick={() => handleTagToggle(user.id)}
+                  className={`px-3 py-2 rounded-full text-sm border transition-colors ${formData.tagIds.includes(user.id)
+                    ? 'bg-blue-500 text-white border-blue-500'
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-blue-500'
+                    }`}
+                  disabled={isCreating}
+                >
+                  @{user.username}
+                </button>
+              ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Click to tag users in your post
           </p>
         </div>
 

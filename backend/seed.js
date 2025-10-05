@@ -36,7 +36,7 @@ async function main() {
                 name: 'Amber',
                 username: 'amber',
                 email: 'amber@example.com',
-                avatar: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=150&h=150&fit=crop&crop=face',
+                avatar: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=150&h=150&fit=crop&crop=face',
                 bio: 'Turning pantry staples into gourmet meals. Follow for creative cooking tips!'
             }
         }),
@@ -47,7 +47,7 @@ async function main() {
                 name: 'Annabel',
                 username: 'annabel',
                 email: 'annabel@example.com',
-                avatar: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=150&h=150&fit=crop&crop=face',
+                avatar: 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=150&h=150&fit=crop&crop=face',
                 bio: 'Learning to cook with whatever I have in my pantry. Sharing my journey!'
             }
         })
