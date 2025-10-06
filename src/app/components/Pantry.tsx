@@ -85,7 +85,6 @@ function PantryItem({
     </div>
   );
 }
-
 // Removed horizontal slider logic; using a simple grid below.
 
 interface ExternalPantryItem {
